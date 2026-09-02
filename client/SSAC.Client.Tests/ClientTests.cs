@@ -193,4 +193,74 @@ public class CorrelationTests
         Assert.Contains(ctx.Findings, f =>
             f.Module == "correlation" && f.Title.Contains("Prefetch wiped"));
     }
+
+    [Fact]
+    public async Task Missing_prefetch_is_not_flagged_when_prefetch_was_merely_unreadable()
+    {
+        var ctx = Ctx();
+        ctx.Signals.Add("prefetch:unreadable");
+        ctx.NoteExecution("someapp.exe", null, "bam", DateTimeOffset.UtcNow);
+
+        await new CorrelationModule().RunAsync(ctx, default);
+
+        Assert.DoesNotContain(ctx.Findings, f => f.Title.Contains("Prefetch file is missing"));
+    }
+}
+
+public class SignatureDbTests
+{
+    [Fact]
+    public void Embedded_db_loads_with_signatures()
+    {
+        var db = SignatureDb.Embedded();
+        Assert.NotEqual("0", db.Version);
+        Assert.True(db.Signatures.Count >= 10);
+    }
+
+    [Fact]
+    public void Filename_matcher_identifies_meteor()
+    {
+        var db = SignatureDb.Embedded();
+        var t = new MatchTarget();
+        t.FileNames.Add("meteor-client-1.21-0.5.8.jar");
+        var hits = db.Match(t);
+        Assert.Contains(hits, h => h.Signature.Id == "meteor-client" && h.Confidence >= h.Signature.MinConfidence);
+    }
+
+    [Fact]
+    public void Log_regex_matcher_identifies_wurst()
+    {
+        var db = SignatureDb.Embedded();
+        var t = new MatchTarget();
+        t.LogText.Add("[12:00:00] [main/INFO]: Starting Wurst Client v7.45");
+        Assert.Contains(db.Match(t), h => h.Signature.Id == "wurst-client");
+    }
+
+    [Fact]
+    public void Below_min_confidence_does_not_hit()
+    {
+        var db = SignatureDb.Embedded();
+        var t = new MatchTarget();
+        t.Strings.Add("com/example/KillAura"); // weight 1, generic sig needs 3
+        Assert.DoesNotContain(db.Match(t), h => h.Signature.Id == "generic-killaura-strings");
+    }
+
+    [Fact]
+    public void Newest_prefers_higher_version_and_survives_garbage()
+    {
+        var embedded = SignatureDb.Embedded();
+        var newer = $"{{\"version\":\"9999.12.31\",\"updated\":\"x\",\"signatures\":[]}}";
+        Assert.Equal("9999.12.31", SignatureDb.Newest(newer).Version);
+        Assert.Equal(embedded.Version, SignatureDb.Newest("not json at all").Version);
+        Assert.Equal(embedded.Version, SignatureDb.Newest(null).Version);
+    }
+
+    [Fact]
+    public void Regexes_in_embedded_db_all_compile()
+    {
+        var db = SignatureDb.Embedded();
+        foreach (var s in db.Signatures)
+            foreach (var m in s.Matchers.Where(m => m.Kind.EndsWith("regex")))
+                _ = new System.Text.RegularExpressions.Regex(m.Value); // throws on bad pattern
+    }
 }

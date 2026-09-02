@@ -4,11 +4,26 @@ namespace SSAC.Client;
 
 public static class AppInfo
 {
-    public const string Version = "0.2.0";
-    public const string SignatureDbVersion = "none (phase 2)";
+    public const string Version = "0.3.0";
+    /// <summary>Set at scan start from the loaded SignatureDb; recorded in the report.</summary>
+    public static string SignatureDbVersion { get; set; } = "embedded";
     // The product ships with the SaaS ingest base URL baked in; overridable for
     // local dev with --endpoint http://localhost:54321/functions/v1
     public const string DefaultEndpoint = "https://REPLACE-ME.functions.supabase.co";
+}
+
+/// <summary>Best-effort GET of a newer signature DB from the public Edge Function.</summary>
+internal static class SignatureFetch
+{
+    public static async Task<string?> TryGet(string endpoint, CancellationToken ct)
+    {
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+            return await http.GetStringAsync($"{endpoint.TrimEnd('/')}/signatures", ct);
+        }
+        catch { return null; }
+    }
 }
 
 public sealed record Options(string Key, string Endpoint, string? Pin)
@@ -118,15 +133,18 @@ internal static class SelfTest
             return Task.CompletedTask;
         });
 
+        var sigDb = SignatureDb.Embedded();
         IScanModule[] modules =
         [
             new EnvironmentModule(), new ProcessListModule(), new PrefetchModule(), new BamModule(),
             new UserAssistModule(), new ShimCacheModule(), new RegistryArtifactsModule(),
-            new RecycleBinModule(), new PowerShellHistoryModule(), new UsnJournalModule(),
-            new AmcacheModule(), new MftModule(), new EventLogModule(), new CorrelationModule(),
+            new RecycleBinModule(), new PowerShellHistoryModule(), new MinecraftModule(sigDb),
+            new UsnJournalModule(), new AmcacheModule(), new MftModule(), new EventLogModule(),
+            new CorrelationModule(),
         ];
 
-        Console.WriteLine($"SSAC client {AppInfo.Version} — selftest (elevated={EnvironmentModule.IsElevated()})\n");
+        Console.WriteLine($"SSAC client {AppInfo.Version} — selftest "
+            + $"(elevated={EnvironmentModule.IsElevated()}, sigdb {sigDb.Version} / {sigDb.Signatures.Count} sigs)\n");
         foreach (var m in modules)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -199,6 +217,10 @@ internal sealed class FlowContext : ApplicationContext
         };
         var env = EnvironmentModule.Probe();
 
+        // Load the signature DB now so its version is in the report from the start.
+        var sigDb = SignatureDb.Newest(await SignatureFetch.TryGet(_opts.Endpoint, cts.Token));
+        AppInfo.SignatureDbVersion = sigDb.Version;
+
         // Record the decision either way; a decline consumes the key and closes the report.
         try
         {
@@ -236,6 +258,7 @@ internal sealed class FlowContext : ApplicationContext
             new RegistryArtifactsModule(),
             new RecycleBinModule(),
             new PowerShellHistoryModule(),
+            new MinecraftModule(sigDb),
             new UsnJournalModule(),
             new AmcacheModule(),
             new MftModule(),

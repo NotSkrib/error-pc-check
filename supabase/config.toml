@@ -36,3 +36,6 @@ enabled = true
 
 [functions.ingest]
 verify_jwt = false
+
+[functions.signatures]
+verify_jwt = false

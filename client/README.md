@@ -53,6 +53,7 @@ network and print the findings (dev smoke test).
 | `registry` | RunMRU, TypedPaths, Run keys, MUICache | suspicious autostart / typed path / run | user |
 | `recycle-bin` | `$Recycle.Bin\*\$I*` (v1 + v2) | deleted `.jar`/`.exe`/`.dll`, esp. from `mods\` (T7) | user |
 | `powershell-history` | `PSReadLine\ConsoleHost_history.txt` | download / inject / Defender-tamper commands | user |
+| `minecraft` | every instance's `mods/*.jar` (name + zip entries), `versions/*.json`, `logs/*.log(.gz)`, `launcher_profiles.json`, `config/` | **known-cheat signature DB** hits (Meteor/Wurst/LiquidBounce/RusherHack/…), `-javaagent` in a profile or version manifest, custom `mainClass`, cheaty config names (T1, T2) | user |
 | `usn-journal` | NTFS `$J` via FSCTL | deleted `.pf`, deleted cheat files, bulk wipe (T7) | admin |
 | `amcache` / `mft` | — | not implemented (offline hive / raw NTFS) — Phase 3b | admin |
 | `eventlog` | Security 4688 | process-creation events naming cheats | admin |
@@ -61,8 +62,18 @@ network and print the findings (dev smoke test).
 \* needs elevation to read on most systems; degrades to a `module_unavailable`
 info finding without it.
 
-Phase 3b: real Amcache.hve + `$MFT` parsers. Phase 4: `.minecraft` inspection +
-the known-cheat signature DB.
+## Signature DB
+
+`signatures/ssac-signatures.json` (repo root) is embedded in the client and also
+served by the public `signatures` Edge Function (client uses the newer of the
+two by `version` string; the version used is recorded in every report). Matchers:
+`file_name_regex`, `log_regex`, `string` (jar entry / config / log substring),
+`file_hash`. A signature fires when its matched matcher weights sum to
+`min_confidence`. Seed carries 18 families; `file_hash` matchers are
+community-contributed and empty in the seed.
+
+Phase 3b: real Amcache.hve + `$MFT` parsers. Phase 5: in-instance JVM/native.
+Phase 6: report/verdict polish + PDF export.
 
 ## Not done yet (later phases)
 

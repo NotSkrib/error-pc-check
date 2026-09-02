@@ -1,0 +1,186 @@
+{
+  "version": "2026.09.02",
+  "updated": "2026-09-02",
+  "note": "SSAC known-cheat signature seed DB (docs/phase-0-design.md §7). Matchers use publicly known names, package identifiers and log banners only. file_hash matchers are community-contributed and intentionally empty in the seed. A signature matches when the summed weight of its matched matchers >= min_confidence. The client uses whichever of (embedded copy, fetched copy) has the newer version and records the version used in every report.",
+  "matcher_kinds": {
+    "file_name_regex": "regex tested against each file name in mods/ and versions/",
+    "log_regex": "regex tested against .minecraft/logs/*.log(.gz) contents",
+    "string": "case-insensitive substring tested against jar entry names, config file names, and log text",
+    "file_hash": "sha256 hex of a mod jar (exact build match)"
+  },
+  "signatures": [
+    {
+      "id": "meteor-client", "name": "Meteor Client", "family": "meteor", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)meteor[-_ ]?client.*\\.jar", "weight": 2 },
+        { "kind": "string", "value": "meteordevelopment", "weight": 2 },
+        { "kind": "string", "value": "meteor-client.mixins.json", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)\\[Meteor\\]|Meteor Client .*? by", "weight": 3 }
+      ],
+      "references": ["https://meteorclient.com"]
+    },
+    {
+      "id": "wurst-client", "name": "Wurst Client", "family": "wurst", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)wurst.*\\.jar", "weight": 2 },
+        { "kind": "string", "value": "net/wurstclient", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Starting Wurst Client|WurstClient v?\\d", "weight": 3 }
+      ],
+      "references": ["https://www.wurstclient.net"]
+    },
+    {
+      "id": "liquidbounce", "name": "LiquidBounce", "family": "liquidbounce", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)liquid[-_ ]?bounce.*\\.jar", "weight": 2 },
+        { "kind": "string", "value": "net/ccbluex/liquidbounce", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)LiquidBounce|CCBlueX", "weight": 3 }
+      ],
+      "references": ["https://liquidbounce.net"]
+    },
+    {
+      "id": "impact-client", "name": "Impact", "family": "impact", "type": "mod",
+      "severity_hint": "high", "min_confidence": 3,
+      "matchers": [
+        { "kind": "string", "value": "com/github/lunardev/impact", "weight": 3 },
+        { "kind": "string", "value": "ImpactClient", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)Impact v?\\d.*build", "weight": 3 }
+      ],
+      "references": ["https://impactclient.net"]
+    },
+    {
+      "id": "aristois", "name": "Aristois", "family": "aristois", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)aristois.*\\.jar", "weight": 2 },
+        { "kind": "string", "value": "me/kaigermany/ossuscraft", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)Aristois", "weight": 2 }
+      ],
+      "references": ["https://aristois.net"]
+    },
+    {
+      "id": "rusherhack", "name": "RusherHack", "family": "rusherhack", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)rusher[-_ ]?hack.*\\.jar", "weight": 2 },
+        { "kind": "string", "value": "org/rusherhack", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)RusherHack", "weight": 3 }
+      ],
+      "references": ["https://rusherhack.org"]
+    },
+    {
+      "id": "forgehax", "name": "ForgeHax", "family": "forgehax", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)forgehax.*\\.jar", "weight": 2 },
+        { "kind": "string", "value": "dev/fiki/forgehax", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)ForgeHax", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "seppuku", "name": "Seppuku", "family": "seppuku", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "string", "value": "me/rigamortis/seppuku", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Seppuku (client|v?\\d)", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "future-client", "name": "Future", "family": "future", "type": "mod",
+      "severity_hint": "high", "min_confidence": 3,
+      "matchers": [
+        { "kind": "log_regex", "value": "(?i)Future (client )?v?\\d", "weight": 3 },
+        { "kind": "string", "value": "futureclient", "weight": 2 }
+      ],
+      "references": ["https://futureclient.net"]
+    },
+    {
+      "id": "sigma-client", "name": "Sigma", "family": "sigma", "type": "mod",
+      "severity_hint": "high", "min_confidence": 3,
+      "matchers": [
+        { "kind": "log_regex", "value": "(?i)Sigma (client )?\\d", "weight": 3 },
+        { "kind": "string", "value": "com/sigmaclient", "weight": 3 }
+      ],
+      "references": ["https://sigmaclient.info"]
+    },
+    {
+      "id": "vape-injectable", "name": "Vape (injectable build)", "family": "vape", "type": "native",
+      "severity_hint": "critical", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)vape.*(loader|inject|v4).*\\.(exe|jar)", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)\\bVape\\b.*(v4|lite|inject)", "weight": 3 }
+      ],
+      "references": ["https://vape.gg"]
+    },
+    {
+      "id": "doomsday-client", "name": "Doomsday", "family": "doomsday", "type": "native",
+      "severity_hint": "critical", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)doomsday.*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Doomsday.*(inject|client)", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "prestige-client", "name": "Prestige", "family": "prestige", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)prestige.*(client|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Prestige (ghost )?client", "weight": 3 }
+      ],
+      "references": ["https://prestigeclient.vip"]
+    },
+    {
+      "id": "entropy-client", "name": "Entropy", "family": "entropy", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)entropy.*(client|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Entropy client", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "novoline", "name": "Novoline", "family": "novoline", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)novoline.*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Novoline", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "nursultan", "name": "Nursultan", "family": "nursultan", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)nursultan.*\\.jar", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Nursultan", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "baritone", "name": "Baritone (automation)", "family": "baritone", "type": "mod",
+      "severity_hint": "medium", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)baritone.*\\.jar", "weight": 2 },
+        { "kind": "string", "value": "baritone/api", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)\\[Baritone\\]", "weight": 2 }
+      ],
+      "references": ["https://github.com/cabaletta/baritone"]
+    },
+    {
+      "id": "generic-killaura-strings", "name": "Generic cheat strings", "family": "generic", "type": "mod",
+      "severity_hint": "medium", "min_confidence": 3,
+      "matchers": [
+        { "kind": "string", "value": "KillAura", "weight": 1 },
+        { "kind": "string", "value": "AimAssist", "weight": 1 },
+        { "kind": "string", "value": "Autoclicker", "weight": 1 },
+        { "kind": "log_regex", "value": "(?i)(kill ?aura|aim ?assist|trigger ?bot|reach ?hack|no ?fall) (enabled|toggled|module)", "weight": 3 }
+      ],
+      "references": []
+    }
+  ]
+}
