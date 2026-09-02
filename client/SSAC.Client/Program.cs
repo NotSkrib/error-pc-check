@@ -85,6 +85,15 @@ internal static class Program
         }
 
         var opts = Options.Parse(args);
+
+        // --auto: headless run (no windows). Consent is auto-accepted and recorded
+        // as headless=true. For E2E / CI only; the shipped tool always shows the
+        // consent screen (docs/phase-0-design.md §5, A1).
+        if (args.Contains("--auto") && opts is not null)
+        {
+            Headless.Run(opts, args.Contains("--browser-optin")).GetAwaiter().GetResult();
+            return;
+        }
         if (opts is null)
         {
             MessageBox.Show(
@@ -161,6 +170,79 @@ internal static class SelfTest
             + $"{ctx.Executions.Select(e => e.Name).Distinct().Count()} programs.");
         Console.WriteLine("\nPress Enter to exit.");
         Console.ReadLine();
+    }
+}
+
+/// <summary>Headless end-to-end run for E2E/CI (`--auto`). No UI; consent auto-accepted, marked headless.</summary>
+internal static class Headless
+{
+    private static readonly nint _con = AllocConsole();
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")] private static extern nint AllocConsole();
+
+    public static async Task Run(Options opts, bool browserOptIn)
+    {
+        _ = _con;
+        using var ingest = new IngestClient(opts.Endpoint, opts.Key, opts.Pin);
+        var ct = CancellationToken.None;
+
+        var desc = await ingest.DescribeAsync(ct);
+        Console.WriteLine($"describe: server='{desc.ServerName}' case='{desc.CaseLabel}' used={desc.AlreadyUsed}");
+        if (desc.AlreadyUsed) { Console.WriteLine("key already used — abort"); return; }
+
+        var consent = new ConsentPayload
+        {
+            Accepted = true,
+            At = DateTimeOffset.UtcNow,
+            BrowserHistoryOptIn = browserOptIn,
+            ServerNameShown = desc.ServerName,
+            CaseLabel = desc.CaseLabel,
+        };
+        var env = EnvironmentModule.Probe();
+        var sigDb = SignatureDb.Newest(await SignatureFetch.TryGet(opts.Endpoint, ct));
+        AppInfo.SignatureDbVersion = sigDb.Version;
+
+        var reportId = await ingest.StartAsync(consent, env, ct);
+        Console.WriteLine($"start: report {reportId}, sigdb {sigDb.Version}");
+
+        IScanModule[] modules =
+        [
+            new EnvironmentModule(), new ProcessListModule(), new GeneralCheatModule(),
+            new PrefetchModule(), new BamModule(), new UserAssistModule(), new ShimCacheModule(),
+            new RegistryArtifactsModule(), new RecycleBinModule(), new PowerShellHistoryModule(),
+            new MinecraftModule(sigDb), new UsnJournalModule(), new AmcacheModule(), new MftModule(),
+            new EventLogModule(), new CorrelationModule(),
+        ];
+
+        var done = 0;
+        var ctx = new ScanContext(async (kind, module, message, _) =>
+        {
+            if (kind == "module_done") Interlocked.Increment(ref done);
+            var pct = (int)(5 + 92.0 * done / modules.Length);
+            Console.WriteLine($"  {pct,3}%  {kind} {module}: {message}");
+            await ingest.EventAsync(kind, module, message, pct, ct);
+        });
+
+        var sent = 0;
+        foreach (var m in modules)
+        {
+            try { await m.RunAsync(ctx, ct); }
+            catch (Exception ex) { ctx.Add(new Finding(m.Name, Severity.Info, $"module '{m.Name}' failed", ex.Message)); }
+            for (; sent < ctx.Findings.Count; sent++)
+            {
+                var f = ctx.Findings[sent];
+                try
+                {
+                    await ingest.FindingAsync(new FindingPayload(
+                        f.Module, f.Severity.Wire(), f.Title, f.Description,
+                        f.Evidence ?? new { }, f.OccurredAt, f.SortKey), ct);
+                }
+                catch (Exception ex) { Console.WriteLine($"  !! finding upload failed: {ex.Message}"); }
+            }
+        }
+
+        await ingest.CompleteAsync(ctx.Verdict.Wire(), ctx.Counts(), aborted: false, ct);
+        Console.WriteLine($"\ncomplete: verdict {ctx.Verdict.Wire().ToUpperInvariant()}, {ctx.Findings.Count} findings");
+        foreach (var kv in ctx.Counts()) Console.WriteLine($"  {kv.Key}: {kv.Value}");
     }
 }
 

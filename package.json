@@ -1,0 +1,14 @@
+{
+  "name": "ssac-scripts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Repo-root tooling deps for scripts/ (e2e checks). App code lives in panel/, client/, supabase/.",
+  "type": "module",
+  "scripts": {
+    "e2e:seed": "node scripts/e2e.mjs seed",
+    "e2e:report": "node scripts/e2e.mjs report"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.114.0"
+  }
+}

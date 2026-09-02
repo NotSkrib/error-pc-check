@@ -26,3 +26,8 @@ Thumbs.db
 [Bb]in/
 [Oo]bj/
 *.user
+
+# e2e throwaway (contain test keys)
+seed.out.json
+seed.err.log
+last_sid.txt
