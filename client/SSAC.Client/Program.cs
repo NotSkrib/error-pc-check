@@ -26,11 +26,12 @@ internal static class SignatureFetch
     }
 }
 
-public sealed record Options(string Key, string Endpoint, string? Pin)
+public sealed record Options(string Key, string Endpoint, string? Pin, bool AutoConsent = false)
 {
     public static Options? Parse(string[] args)
     {
         string? key = null, endpoint = null, pin = null;
+        var autoConsent = false;
         for (var i = 0; i < args.Length; i++)
         {
             switch (args[i])
@@ -38,6 +39,7 @@ public sealed record Options(string Key, string Endpoint, string? Pin)
                 case "--key" when i + 1 < args.Length: key = args[++i]; break;
                 case "--endpoint" when i + 1 < args.Length: endpoint = args[++i]; break;
                 case "--pin" when i + 1 < args.Length: pin = args[++i]; break;
+                case "--yes": autoConsent = true; break; // QA: skip the consent click, keep the windows
                 case "--help" or "-h" or "/?": return null;
                 default:
                     if (!args[i].StartsWith('-') && key is null) key = args[i];
@@ -47,7 +49,7 @@ public sealed record Options(string Key, string Endpoint, string? Pin)
         key ??= KeyFromOwnFilename();
         key ??= PromptForKey();
         if (string.IsNullOrWhiteSpace(key)) return null;
-        return new Options(key.Trim(), (endpoint ?? AppInfo.DefaultEndpoint).TrimEnd('/'), pin);
+        return new Options(key.Trim(), (endpoint ?? AppInfo.DefaultEndpoint).TrimEnd('/'), pin, autoConsent);
     }
 
     /// <summary>
@@ -96,6 +98,11 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
 
+        // Make silent crashes visible instead of the process just vanishing.
+        Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+        Application.ThreadException += (_, e) => ShowFatal(e.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => ShowFatal(e.ExceptionObject as Exception);
+
         if (args.Contains("--selftest"))
         {
             SelfTest.Run().GetAwaiter().GetResult();
@@ -139,6 +146,17 @@ internal static class Program
                 try { Directory.Delete(d, true); } catch { /* best effort */ }
         }
         catch { /* ignore */ }
+    }
+
+    internal static void ShowFatal(Exception? ex)
+    {
+        try
+        {
+            MessageBox.Show(
+                $"The screenshare tool hit an unexpected error and has to close.\n\n{ex?.GetType().Name}: {ex?.Message}",
+                "SSAC Screenshare Tool", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        catch { /* nothing more we can do */ }
     }
 }
 
@@ -272,7 +290,23 @@ internal sealed class FlowContext : ApplicationContext
     public FlowContext(Options opts)
     {
         _opts = opts;
-        SynchronizationContext.Current!.Post(async _ => await RunAsync(), null);
+        // Kick off the async flow once the message loop is actually running.
+        // (In the constructor, before Application.Run, there is no WinForms
+        // SynchronizationContext yet — posting to it here would NRE and the
+        // process would exit before any window appeared.)
+        var start = new System.Windows.Forms.Timer { Interval = 1 };
+        start.Tick += async (_, _) =>
+        {
+            start.Stop();
+            start.Dispose();
+            try { await RunAsync(); }
+            catch (Exception ex)
+            {
+                Program.ShowFatal(ex);
+                ExitThread();
+            }
+        };
+        start.Start();
     }
 
     private async Task RunAsync()
@@ -303,8 +337,13 @@ internal sealed class FlowContext : ApplicationContext
 
         // ---- consent (docs/phase-0-design.md §5) ----
         ConsentResult? consent = null;
-        using (var cf = new ConsentForm(desc.ServerName, desc.CaseLabel, desc.SuspectLabel))
+        if (_opts.AutoConsent)
         {
+            consent = new ConsentResult(true, DateTimeOffset.UtcNow, false);
+        }
+        else
+        {
+            using var cf = new ConsentForm(desc.ServerName, desc.CaseLabel, desc.SuspectLabel);
             if (cf.ShowDialog() == DialogResult.OK) consent = cf.Result;
         }
 
