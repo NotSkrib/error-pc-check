@@ -92,6 +92,22 @@ Deno.serve(async (req) => {
     IP_SALT + ":" + (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim(),
   );
 
+  // ------- describe: key details for the consent screen; does NOT consume the key -------
+  if (action === "describe") {
+    const { data: meta } = await admin
+      .from("sessions")
+      .select("case_label, suspect_label, expires_at, tenants(name)")
+      .eq("id", session.id)
+      .single();
+    return json({
+      server_name: (meta?.tenants as { name?: string } | null)?.name ?? "Unknown server",
+      case_label: meta?.case_label ?? "",
+      suspect_label: meta?.suspect_label ?? null,
+      expires_at: meta?.expires_at ?? session.expires_at,
+      already_used: session.status !== "pending",
+    });
+  }
+
   // ------- start: consume the key, create the report -------
   if (action === "start") {
     if (session.status !== "pending") return json({ error: "key already used" }, 409);

@@ -1,0 +1,234 @@
+using System.Windows.Forms;
+
+namespace SSAC.Client;
+
+public static class AppInfo
+{
+    public const string Version = "0.2.0";
+    public const string SignatureDbVersion = "none (phase 2)";
+    // The product ships with the SaaS ingest base URL baked in; overridable for
+    // local dev with --endpoint http://localhost:54321/functions/v1
+    public const string DefaultEndpoint = "https://REPLACE-ME.functions.supabase.co";
+}
+
+public sealed record Options(string Key, string Endpoint, string? Pin)
+{
+    public static Options? Parse(string[] args)
+    {
+        string? key = null, endpoint = null, pin = null;
+        for (var i = 0; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "--key" when i + 1 < args.Length: key = args[++i]; break;
+                case "--endpoint" when i + 1 < args.Length: endpoint = args[++i]; break;
+                case "--pin" when i + 1 < args.Length: pin = args[++i]; break;
+                case "--help" or "-h" or "/?": return null;
+                default:
+                    if (!args[i].StartsWith('-') && key is null) key = args[i];
+                    break;
+            }
+        }
+        key ??= PromptForKey();
+        if (string.IsNullOrWhiteSpace(key)) return null;
+        return new Options(key.Trim(), (endpoint ?? AppInfo.DefaultEndpoint).TrimEnd('/'), pin);
+    }
+
+    private static string? PromptForKey()
+    {
+        using var f = new Form
+        {
+            Text = "SSAC Screenshare Tool",
+            ClientSize = new System.Drawing.Size(420, 130),
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            StartPosition = FormStartPosition.CenterScreen,
+            MaximizeBox = false,
+            MinimizeBox = false,
+        };
+        var lbl = new Label { Text = "Paste the key your staff member gave you:", Dock = DockStyle.Top, Height = 28, Padding = new Padding(10, 8, 10, 0) };
+        var box = new TextBox { Dock = DockStyle.Top, Margin = new Padding(10) };
+        var ok = new Button { Text = "Continue", Dock = DockStyle.Bottom, Height = 32, DialogResult = DialogResult.OK };
+        f.Controls.Add(box);
+        f.Controls.Add(lbl);
+        f.Controls.Add(ok);
+        f.AcceptButton = ok;
+        return f.ShowDialog() == DialogResult.OK ? box.Text : null;
+    }
+}
+
+internal static class Program
+{
+    [STAThread]
+    private static void Main(string[] args)
+    {
+        ApplicationConfiguration.Initialize();
+
+        var opts = Options.Parse(args);
+        if (opts is null)
+        {
+            MessageBox.Show(
+                "SSAC Screenshare Tool\n\nUsage: ssac-screenshare --key <KEY> [--endpoint <URL>] [--pin <SPKI>]\n\n" +
+                "You normally just double-click and paste the key when asked.",
+                "SSAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        try
+        {
+            Application.Run(new FlowContext(opts));
+        }
+        finally
+        {
+            TempCleanup();
+        }
+    }
+
+    private static void TempCleanup()
+    {
+        try
+        {
+            foreach (var d in Directory.EnumerateDirectories(Path.GetTempPath(), "ssac-*"))
+                try { Directory.Delete(d, true); } catch { /* best effort */ }
+        }
+        catch { /* ignore */ }
+    }
+}
+
+/// <summary>Drives the whole run on the WinForms STA/sync-context thread.</summary>
+internal sealed class FlowContext : ApplicationContext
+{
+    private readonly Options _opts;
+
+    public FlowContext(Options opts)
+    {
+        _opts = opts;
+        SynchronizationContext.Current!.Post(async _ => await RunAsync(), null);
+    }
+
+    private async Task RunAsync()
+    {
+        using var ingest = new IngestClient(_opts.Endpoint, _opts.Key, _opts.Pin);
+        var cts = new CancellationTokenSource();
+
+        SessionDescription desc;
+        try
+        {
+            desc = await ingest.DescribeAsync(cts.Token);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not reach the panel or the key is invalid.\n\n{ex.Message}",
+                "SSAC", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            ExitThread();
+            return;
+        }
+
+        if (desc.AlreadyUsed)
+        {
+            MessageBox.Show("This key has already been used. Ask your staff member for a new one.",
+                "SSAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            ExitThread();
+            return;
+        }
+
+        // ---- consent (docs/phase-0-design.md §5) ----
+        ConsentResult? consent = null;
+        using (var cf = new ConsentForm(desc.ServerName, desc.CaseLabel, desc.SuspectLabel))
+        {
+            if (cf.ShowDialog() == DialogResult.OK) consent = cf.Result;
+        }
+
+        var consentPayload = new ConsentPayload
+        {
+            Accepted = consent?.Accepted ?? false,
+            At = consent?.At ?? DateTimeOffset.UtcNow,
+            BrowserHistoryOptIn = consent?.BrowserHistoryOptIn ?? false,
+            ServerNameShown = desc.ServerName,
+            CaseLabel = desc.CaseLabel,
+        };
+        var env = EnvironmentModule.Probe();
+
+        // Record the decision either way; a decline consumes the key and closes the report.
+        try
+        {
+            await ingest.StartAsync(consentPayload, env, cts.Token);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not start the scan.\n\n{ex.Message}", "SSAC",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            ExitThread();
+            return;
+        }
+
+        if (consent is null or { Accepted: false })
+        {
+            await ingest.CompleteAsync(Severity.Info.Wire(), new(), aborted: true, cts.Token);
+            MessageBox.Show("You declined. Nothing further was scanned. The staff member has been notified.",
+                "SSAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ExitThread();
+            return;
+        }
+
+        // ---- scan ----
+        var progress = new ProgressForm(desc.ServerName);
+        progress.Show();
+
+        var ctx = new ScanContext(async (kind, module, message, pct) =>
+        {
+            progress.Report(message, pct, $"{kind} {module}: {message}");
+            await ingest.EventAsync(kind, module, message, pct, cts.Token);
+        });
+
+        IScanModule[] modules =
+        [
+            new EnvironmentModule(),
+            new ProcessListModule(),
+            new PipelineCheckModule(),
+        ];
+
+        var uploadedOk = true;
+        await Task.Run(async () =>
+        {
+            var sent = 0;
+            foreach (var m in modules)
+            {
+                try
+                {
+                    await m.RunAsync(ctx, cts.Token);
+                }
+                catch (Exception ex)
+                {
+                    ctx.Add(new Finding(m.Name, Severity.Info, $"Module '{m.Name}' failed to run",
+                        ex.Message));
+                }
+
+                for (; sent < ctx.Findings.Count; sent++)
+                {
+                    var f = ctx.Findings[sent];
+                    try
+                    {
+                        await ingest.FindingAsync(new FindingPayload(
+                            f.Module, f.Severity.Wire(), f.Title, f.Description,
+                            f.Evidence ?? new { }, f.OccurredAt, f.SortKey), cts.Token);
+                    }
+                    catch { uploadedOk = false; }
+                }
+            }
+        });
+
+        try
+        {
+            await ingest.CompleteAsync(ctx.Verdict.Wire(), ctx.Counts(), aborted: false, cts.Token);
+        }
+        catch { uploadedOk = false; }
+
+        progress.Close();
+        using (var sf = new SummaryForm(desc.ServerName, ctx.Verdict, ctx.Findings, uploadedOk))
+        {
+            sf.ShowDialog();
+        }
+
+        ExitThread();
+    }
+}

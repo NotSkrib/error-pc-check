@@ -21,3 +21,8 @@ supabase/.temp/
 .DS_Store
 Thumbs.db
 *.log
+
+# dotnet
+[Bb]in/
+[Oo]bj/
+*.user
