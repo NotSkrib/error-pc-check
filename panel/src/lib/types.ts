@@ -46,6 +46,8 @@ export const MODULE_LABEL: Record<string, string> = {
   registry: "Registry artifacts",
   "recycle-bin": "Recycle Bin",
   "powershell-history": "PowerShell history",
+  "browser-downloads": "Browser downloads",
+  "general-cheats": "General cheat tooling",
   minecraft: "Minecraft install",
   "usn-journal": "USN journal",
   amcache: "Amcache",

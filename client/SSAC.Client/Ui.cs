@@ -3,124 +3,34 @@ using System.Windows.Forms;
 
 namespace SSAC.Client;
 
-/// <summary>
-/// Consent screen — docs/phase-0-design.md §5. Branding is deliberately loud so the
-/// tool cannot be passed off as something benign (A1). Returns null on cancel.
-/// </summary>
-public sealed class ConsentForm : Form
-{
-    private readonly CheckBox _browserOptIn;
-    public ConsentResult? Result { get; private set; }
-
-    public ConsentForm(string serverName, string caseLabel, string? suspectLabel)
-    {
-        Text = $"SSAC Screenshare Tool — {serverName}";
-        StartPosition = FormStartPosition.CenterScreen;
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
-        MinimizeBox = false;
-        ClientSize = new Size(560, 520);
-        BackColor = Color.FromArgb(14, 17, 22);
-        ForeColor = Color.Gainsboro;
-        Font = new Font("Segoe UI", 9.5f);
-
-        var head = new Label
-        {
-            Text = $"SSAC Screenshare Tool\n{serverName}",
-            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
-            ForeColor = Color.White,
-            AutoSize = false,
-            Dock = DockStyle.Top,
-            Height = 64,
-            Padding = new Padding(16, 12, 16, 0),
-        };
-
-        var body = new Label
-        {
-            Dock = DockStyle.Top,
-            Height = 320,
-            Padding = new Padding(16, 8, 16, 8),
-            Text =
-                $"A staff member of {serverName} has asked you to run a screenshare check " +
-                $"(case: {caseLabel}{(suspectLabel is null ? "" : $", for {suspectLabel}")}).\n\n" +
-                "WHAT IT READS:\n" +
-                "  • Your list of running programs and when they started\n" +
-                "  • Your Minecraft folders: mods, version files, logs, launcher settings\n" +
-                "    (it does NOT read your account password or login token)\n" +
-                "  • Windows records of which programs ran or were deleted recently\n" +
-                "  • The Recycle Bin (only .jar, .exe, .dll files)\n\n" +
-                "WHAT IT NEVER TOUCHES: your documents, photos, messages, browser history*,\n" +
-                "passwords, or anything unrelated to Minecraft.  (*unless you tick the box below)\n\n" +
-                "WHAT IT DOES NOT DO: install anything, stay running after it finishes, start\n" +
-                "with Windows, or capture your screen or keystrokes. It deletes its own\n" +
-                "temporary files when it closes.",
-        };
-
-        _browserOptIn = new CheckBox
-        {
-            Dock = DockStyle.Top,
-            Height = 28,
-            Padding = new Padding(16, 0, 16, 0),
-            Text = "Also check my browser's download history for cheat-client downloads (optional)",
-            ForeColor = Color.Gainsboro,
-        };
-
-        var buttons = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Bottom,
-            FlowDirection = FlowDirection.RightToLeft,
-            Height = 56,
-            Padding = new Padding(12),
-        };
-        var ok = new Button
-        {
-            Text = "I consent — start the scan",
-            AutoSize = true,
-            BackColor = Color.White,
-            ForeColor = Color.Black,
-            Padding = new Padding(10, 6, 10, 6),
-        };
-        var cancel = new Button { Text = "Cancel", AutoSize = true, Padding = new Padding(10, 6, 10, 6) };
-        ok.Click += (_, _) =>
-        {
-            Result = new ConsentResult(true, DateTimeOffset.UtcNow, _browserOptIn.Checked);
-            DialogResult = DialogResult.OK;
-            Close();
-        };
-        cancel.Click += (_, _) => { DialogResult = DialogResult.Cancel; Close(); };
-        buttons.Controls.Add(ok);
-        buttons.Controls.Add(cancel);
-
-        Controls.Add(buttons);
-        Controls.Add(_browserOptIn);
-        Controls.Add(body);
-        Controls.Add(head);
-    }
-}
-
+/// <summary>Recorded consent (docs/phase-0-design.md §5). The simple flow records it automatically.</summary>
 public readonly record struct ConsentResult(bool Accepted, DateTimeOffset At, bool BrowserHistoryOptIn);
 
-/// <summary>Live progress + scrolling log shown while the scan runs.</summary>
-public sealed class ProgressForm : Form
+/// <summary>
+/// The whole client UI: one small always-on-top window. It auto-starts the scan,
+/// shows progress, and switches to a "done" state with a Close button.
+/// A one-line disclosure keeps it from looking like something it isn't (A1).
+/// </summary>
+public sealed class SimpleForm : Form
 {
     private readonly ProgressBar _bar;
-    private readonly TextBox _log;
-    private readonly Label _status;
     private readonly Label _heading;
-    private readonly Label _elapsed;
+    private readonly Label _status;
+    private readonly Button _close;
     private readonly System.Windows.Forms.Timer _tick = new() { Interval = 1000 };
     private readonly DateTime _started = DateTime.UtcNow;
     private bool _done;
 
-    public ProgressForm(string serverName)
+    public SimpleForm(string serverName)
     {
-        Text = $"SSAC Screenshare Tool — {serverName}";
+        Text = $"SSAC Screenshare — {serverName}";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
         TopMost = true;
-        ClientSize = new Size(580, 400);
+        ShowInTaskbar = true;
+        ClientSize = new Size(440, 190);
         BackColor = Color.FromArgb(14, 17, 22);
         ForeColor = Color.Gainsboro;
         Font = new Font("Segoe UI", 9.5f);
@@ -128,133 +38,91 @@ public sealed class ProgressForm : Form
         _heading = new Label
         {
             Dock = DockStyle.Top,
-            Height = 40,
-            Padding = new Padding(14, 12, 14, 0),
-            Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+            Height = 34,
+            Padding = new Padding(16, 14, 16, 0),
+            Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
             ForeColor = Color.White,
-            Text = $"Checking this PC for {serverName}…",
+            Text = "Checking this PC…",
         };
-        _status = new Label { Dock = DockStyle.Top, Height = 24, Padding = new Padding(14, 2, 14, 0), Text = "Starting…" };
-        _bar = new ProgressBar { Dock = DockStyle.Top, Height = 22, Style = ProgressBarStyle.Continuous, Margin = new Padding(14) };
-        _elapsed = new Label { Dock = DockStyle.Top, Height = 20, Padding = new Padding(14, 0, 14, 0), ForeColor = Color.Gray, Text = "elapsed 0:00 — please leave this window open" };
-        _log = new TextBox
+        var disclosure = new Label
         {
-            Dock = DockStyle.Fill,
-            Multiline = true,
-            ReadOnly = true,
-            ScrollBars = ScrollBars.Vertical,
-            BackColor = Color.FromArgb(10, 12, 16),
-            ForeColor = Color.Silver,
-            Font = new Font("Consolas", 9f),
-            BorderStyle = BorderStyle.None,
+            Dock = DockStyle.Top,
+            Height = 34,
+            Padding = new Padding(16, 2, 16, 0),
+            ForeColor = Color.Gray,
+            Text = $"Looks for Minecraft cheats and sends a report to {serverName}.\nNothing is installed. This window closes when it's done.",
         };
-        var pad = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14) };
-        pad.Controls.Add(_log);
-        Controls.Add(pad);
-        Controls.Add(_elapsed);
-        Controls.Add(_bar);
+        _bar = new ProgressBar
+        {
+            Dock = DockStyle.Top,
+            Height = 22,
+            Margin = new Padding(16, 8, 16, 8),
+            Style = ProgressBarStyle.Continuous,
+        };
+        _status = new Label { Dock = DockStyle.Top, Height = 22, Padding = new Padding(16, 2, 16, 0), ForeColor = Color.Silver, Text = "Starting…" };
+        _close = new Button
+        {
+            Text = "Close",
+            AutoSize = false,
+            Size = new Size(90, 30),
+            Dock = DockStyle.Right,
+            Enabled = false,
+            BackColor = Color.White,
+            ForeColor = Color.Black,
+        };
+        _close.Click += (_, _) => Close();
+        var foot = new Panel { Dock = DockStyle.Bottom, Height = 46, Padding = new Padding(16, 8, 16, 8) };
+        foot.Controls.Add(_close);
+
+        Controls.Add(foot);
         Controls.Add(_status);
+        Controls.Add(_bar);
+        Controls.Add(disclosure);
         Controls.Add(_heading);
 
         _tick.Tick += (_, _) =>
         {
             if (_done) return;
             var e = DateTime.UtcNow - _started;
-            _elapsed.Text = $"elapsed {(int)e.TotalMinutes}:{e.Seconds:00} — please leave this window open";
+            _status.Text = $"{_status.Tag ?? "Working…"}   ({(int)e.TotalMinutes}:{e.Seconds:00})";
         };
         _tick.Start();
     }
 
-    public void Report(string status, int? pct, string logLine)
+    /// <summary>Update progress. Call from any thread.</summary>
+    public void Report(string status, int? pct)
     {
         if (IsDisposed) return;
         BeginInvoke(() =>
         {
-            _status.Text = status;
+            _status.Tag = status;
             if (pct is int p) _bar.Value = Math.Clamp(p, 0, 100);
-            if (!string.IsNullOrEmpty(logLine)) _log.AppendText(logLine + Environment.NewLine);
         });
     }
 
-    /// <summary>Flip to a finished state briefly before the summary window opens.</summary>
-    public void MarkDone()
+    /// <summary>Switch to the finished state and let the user close the window.</summary>
+    public void Finish(Severity verdict, int findingCount, bool uploaded)
     {
         if (IsDisposed) return;
         BeginInvoke(() =>
         {
             _done = true;
             _bar.Value = 100;
-            _heading.Text = "Finished — sending the report…";
-            _status.Text = "done";
+            _tick.Stop();
+            if (uploaded)
+            {
+                _heading.ForeColor = Color.FromArgb(120, 220, 150);
+                _heading.Text = "✓  All done";
+                _status.Text = $"Report sent — {findingCount} item(s) flagged, overall {verdict.Wire().ToUpperInvariant()}.";
+            }
+            else
+            {
+                _heading.ForeColor = Color.FromArgb(240, 140, 120);
+                _heading.Text = "Finished, but the report didn't send";
+                _status.Text = "Check the internet connection and ask the staff member for a new link.";
+            }
+            _close.Enabled = true;
+            _close.Focus();
         });
-    }
-}
-
-/// <summary>Final summary shown to the suspect — they always see what was sent.</summary>
-public sealed class SummaryForm : Form
-{
-    public SummaryForm(string serverName, Severity verdict, IReadOnlyList<Finding> findings, bool uploaded)
-    {
-        Text = $"SSAC Screenshare Tool — {serverName}";
-        StartPosition = FormStartPosition.CenterScreen;
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
-        MinimizeBox = false;
-        TopMost = true;
-        ClientSize = new Size(560, 420);
-        BackColor = Color.FromArgb(14, 17, 22);
-        ForeColor = Color.Gainsboro;
-        Font = new Font("Segoe UI", 9.5f);
-
-        var head = new Label
-        {
-            Dock = DockStyle.Top,
-            Height = 52,
-            Padding = new Padding(16, 12, 16, 0),
-            Font = new Font("Segoe UI", 12f, FontStyle.Bold),
-            ForeColor = uploaded ? Color.FromArgb(120, 220, 150) : Color.FromArgb(240, 140, 120),
-            Text = uploaded
-                ? $"✓  Done — report sent to {serverName}"
-                : "✗  Scan finished, but the report could NOT be sent",
-        };
-
-        var list = new TextBox
-        {
-            Dock = DockStyle.Fill,
-            Multiline = true,
-            ReadOnly = true,
-            ScrollBars = ScrollBars.Vertical,
-            BackColor = Color.FromArgb(10, 12, 16),
-            ForeColor = Color.Silver,
-            Font = new Font("Consolas", 9f),
-            BorderStyle = BorderStyle.None,
-            Text = BuildText(verdict, findings),
-        };
-        var pad = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12) };
-        pad.Controls.Add(list);
-
-        var close = new Button { Text = "Close", AutoSize = true, Dock = DockStyle.Right, Padding = new Padding(12, 6, 12, 6) };
-        close.Click += (_, _) => Close();
-        var foot = new Panel { Dock = DockStyle.Bottom, Height = 48, Padding = new Padding(12) };
-        foot.Controls.Add(close);
-
-        Controls.Add(pad);
-        Controls.Add(foot);
-        Controls.Add(head);
-    }
-
-    private static string BuildText(Severity verdict, IReadOnlyList<Finding> findings)
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"Overall: {verdict.Wire().ToUpperInvariant()}");
-        sb.AppendLine("Findings are evidence, not a verdict. A human reviews them.");
-        sb.AppendLine();
-        if (findings.Count == 0) sb.AppendLine("(no findings)");
-        foreach (var f in findings.OrderByDescending(f => f.Severity))
-        {
-            sb.AppendLine($"[{f.Severity.Wire().ToUpperInvariant()}] {f.Title}");
-            sb.AppendLine($"    {f.Description}");
-        }
-        return sb.ToString();
     }
 }

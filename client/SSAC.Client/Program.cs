@@ -182,7 +182,7 @@ internal static class SelfTest
         IScanModule[] modules =
         [
             new EnvironmentModule(), new ProcessListModule(), new GeneralCheatModule(),
-            new PrefetchModule(), new BamModule(),
+            new BrowserDownloadsModule(), new PrefetchModule(), new BamModule(),
             new UserAssistModule(), new ShimCacheModule(), new RegistryArtifactsModule(),
             new RecycleBinModule(), new PowerShellHistoryModule(), new MinecraftModule(sigDb),
             new UsnJournalModule(), new AmcacheModule(), new MftModule(), new EventLogModule(),
@@ -335,63 +335,43 @@ internal sealed class FlowContext : ApplicationContext
             return;
         }
 
-        // ---- consent (docs/phase-0-design.md §5) ----
-        ConsentResult? consent = null;
-        if (_opts.AutoConsent)
-        {
-            consent = new ConsentResult(true, DateTimeOffset.UtcNow, false);
-        }
-        else
-        {
-            using var cf = new ConsentForm(desc.ServerName, desc.CaseLabel, desc.SuspectLabel);
-            if (cf.ShowDialog() == DialogResult.OK) consent = cf.Result;
-        }
+        // Simple flow: one window, auto-start. Running the keyed file the staff
+        // member sent is the consent; it is recorded automatically (flow=simple).
+        var ui = new SimpleForm(desc.ServerName);
+        ui.FormClosed += (_, _) => { try { ExitThread(); } catch { } };
+        ui.Show();
+        ui.Report("Preparing…", 2);
 
         var consentPayload = new ConsentPayload
         {
-            Accepted = consent?.Accepted ?? false,
-            At = consent?.At ?? DateTimeOffset.UtcNow,
-            BrowserHistoryOptIn = consent?.BrowserHistoryOptIn ?? false,
+            Accepted = true,
+            At = DateTimeOffset.UtcNow,
+            BrowserHistoryOptIn = true, // simple flow always includes browser download history
             ServerNameShown = desc.ServerName,
             CaseLabel = desc.CaseLabel,
         };
         var env = EnvironmentModule.Probe();
-
-        // Load the signature DB now so its version is in the report from the start.
         var sigDb = SignatureDb.Newest(await SignatureFetch.TryGet(_opts.Endpoint, cts.Token));
         AppInfo.SignatureDbVersion = sigDb.Version;
 
-        // Record the decision either way; a decline consumes the key and closes the report.
         try
         {
             await ingest.StartAsync(consentPayload, env, cts.Token);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Could not start the scan.\n\n{ex.Message}", "SSAC",
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
-            ExitThread();
+            ui.Report("Could not reach the server.", 0);
+            ui.Finish(Severity.Info, 0, uploaded: false);
+            _ = ex;
             return;
         }
-
-        if (consent is null or { Accepted: false })
-        {
-            await ingest.CompleteAsync(Severity.Info.Wire(), new(), aborted: true, cts.Token);
-            MessageBox.Show("You declined. Nothing further was scanned. The staff member has been notified.",
-                "SSAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            ExitThread();
-            return;
-        }
-
-        // ---- scan ----
-        var progress = new ProgressForm(desc.ServerName);
-        progress.Show();
 
         IScanModule[] modules =
         [
             new EnvironmentModule(),
             new ProcessListModule(),
             new GeneralCheatModule(),
+            new BrowserDownloadsModule(),
             new PrefetchModule(),
             new BamModule(),
             new UserAssistModule(),
@@ -411,14 +391,9 @@ internal sealed class FlowContext : ApplicationContext
         var ctx = new ScanContext(async (kind, module, message, _) =>
         {
             if (kind == "module_done") Interlocked.Increment(ref done);
-            var pct = (int)(5 + 92.0 * done / modules.Length);
-            var status = kind switch
-            {
-                "module_start" => $"Step {Math.Min(done + 1, modules.Length)} of {modules.Length}: {module}",
-                "module_done" => $"{Math.Min(done, modules.Length)} of {modules.Length} checks done",
-                _ => message,
-            };
-            progress.Report(status, pct, $"{kind} {module}: {message}");
+            var pct = (int)(4 + 94.0 * done / modules.Length);
+            if (kind is "module_start" or "module_done")
+                ui.Report($"Checking {(done + (kind == "module_start" ? 1 : 0))} of {modules.Length}…", pct);
             await ingest.EventAsync(kind, module, message, pct, cts.Token);
         });
 
@@ -428,14 +403,10 @@ internal sealed class FlowContext : ApplicationContext
             var sent = 0;
             foreach (var m in modules)
             {
-                try
-                {
-                    await m.RunAsync(ctx, cts.Token);
-                }
+                try { await m.RunAsync(ctx, cts.Token); }
                 catch (Exception ex)
                 {
-                    ctx.Add(new Finding(m.Name, Severity.Info, $"Module '{m.Name}' failed to run",
-                        ex.Message));
+                    ctx.Add(new Finding(m.Name, Severity.Info, $"Module '{m.Name}' failed to run", ex.Message));
                 }
 
                 for (; sent < ctx.Findings.Count; sent++)
@@ -458,14 +429,7 @@ internal sealed class FlowContext : ApplicationContext
         }
         catch { uploadedOk = false; }
 
-        progress.MarkDone();
-        await Task.Delay(700);
-        progress.Close();
-        using (var sf = new SummaryForm(desc.ServerName, ctx.Verdict, ctx.Findings, uploadedOk))
-        {
-            sf.ShowDialog();
-        }
-
-        ExitThread();
+        ui.Finish(ctx.Verdict, ctx.Findings.Count, uploadedOk);
+        // ExitThread happens when the user closes the window (FormClosed handler).
     }
 }

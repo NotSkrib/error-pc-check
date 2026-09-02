@@ -121,9 +121,15 @@ The client may read **only** the following. Anything not listed requires a desig
 - Windows Event Log: Security 4688, `Microsoft-Windows-PowerShell/Operational`, Sysmon if installed.
 - PowerShell console history file (`ConsoleHost_history.txt`).
 
-### 4.3 Opt-in only (checkbox on consent screen, default OFF)
+### 4.3 Browser download history (on by default in the simple flow)
 
-- Browser download history (Chrome/Edge/Firefox `History` DBs — **download rows only**, never browsing history or form data).
+- Chrome/Edge/Brave/Opera `History` DB `downloads` table and Firefox `places.sqlite`
+  download annotations — **download rows only** (target path, source URL, referrer,
+  timestamp). Never browsing history, cookies, form data, or saved passwords.
+- The DB is copied to `%TEMP%` and opened read-only (the live file is locked).
+- Rationale for default-on: catches cheat clients that were downloaded and then
+  deleted from the Downloads folder before the check. The one-line disclosure in
+  the simple UI names it.
 
 ### 4.4 Never
 

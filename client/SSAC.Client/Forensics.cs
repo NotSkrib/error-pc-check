@@ -32,6 +32,21 @@ public static class Forensics
         "systeminformer", "system informer", // legit sysadmin fork of Process Hacker
     ];
 
+    /// <summary>Domains that host Minecraft / game cheats — matched against browser download URLs.</summary>
+    public static readonly string[] CheatDomains =
+    [
+        "vape.gg", "liquidbounce.net", "wurstclient.net", "meteorclient.com", "rusherhack.org",
+        "impactclient.net", "prestigeclient.vip", "sigmaclient.info", "futureclient.net",
+        "novoline.", "nightware.", "aristois.net", "doomsdayclient", "entropy.", "nursultan",
+        "unknowncheats.me", "guidedhacking.com", "cheatengine.org", "wemod.com",
+    ];
+
+    public static bool IsCheatDownload(string urlOrPath)
+    {
+        var l = (urlOrPath ?? "").ToLowerInvariant();
+        return CheatDomains.Any(d => l.Contains(d)) || LooksLikeCheat(l);
+    }
+
     /// <summary>Kernel drivers commonly abused by cheats via BYOVD (bring-your-own-vulnerable-driver).</summary>
     public static readonly string[] VulnerableDrivers =
     [
