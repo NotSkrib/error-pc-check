@@ -9,6 +9,7 @@
     "e2e:report": "node scripts/e2e.mjs report"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.114.0"
+    "@supabase/supabase-js": "^2.114.0",
+    "tus-js-client": "^4.3.1"
   }
 }

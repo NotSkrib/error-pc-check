@@ -13,6 +13,12 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 }
 
+/** Public client download with the one-time key baked into the saved filename. */
+function downloadUrl(key: string) {
+  const base = import.meta.env.VITE_SUPABASE_URL as string;
+  return `${base}/storage/v1/object/public/ssac-assets/client/ssac-screenshare.exe?download=ssac-screenshare-${encodeURIComponent(key)}.exe`;
+}
+
 export default function Dashboard() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState<string | null>(null);
@@ -169,14 +175,57 @@ export default function Dashboard() {
             </form>
             {err && <p className="mt-2 text-sm text-sev-high">{err}</p>}
             {issued && (
-              <div className="mt-3 rounded border border-sev-info/40 bg-sev-info/10 p-3 text-sm">
+              <div className="mt-3 space-y-3 rounded border border-sev-info/40 bg-sev-info/10 p-3 text-sm">
                 <p className="opacity-70">
-                  Give this key to the suspect with the client download. It is shown once, works
-                  once, and expires {new Date(issued.expires_at).toLocaleTimeString()}.
+                  Send this download link to the person. The file has the key built into its name —
+                  they just download and run it. Works once, expires{" "}
+                  {new Date(issued.expires_at).toLocaleTimeString()}.
                 </p>
-                <code className="mt-2 block break-all rounded bg-black/40 px-2 py-1 font-mono text-base">
-                  {issued.key}
-                </code>
+
+                <div>
+                  <label className="block text-xs opacity-60">Download link</label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      readOnly
+                      className="flex-1 rounded bg-black/40 px-2 py-1.5 font-mono text-xs"
+                      value={downloadUrl(issued.key)}
+                      onFocus={(e) => e.currentTarget.select()}
+                    />
+                    <button
+                      type="button"
+                      className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/5"
+                      onClick={() => navigator.clipboard?.writeText(downloadUrl(issued.key))}
+                    >
+                      Copy
+                    </button>
+                    <a
+                      href={downloadUrl(issued.key)}
+                      className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/5"
+                    >
+                      Test
+                    </a>
+                  </div>
+                </div>
+
+                <details className="text-xs opacity-70">
+                  <summary className="cursor-pointer">Manual / advanced</summary>
+                  <p className="mt-1">Raw key (if the person runs the client themselves):</p>
+                  <code className="mt-1 block break-all rounded bg-black/40 px-2 py-1 font-mono">
+                    {issued.key}
+                  </code>
+                  <p className="mt-2">
+                    Needs the .NET 8 Desktop Runtime (x64). If the file won't open, get it from{" "}
+                    <a
+                      className="underline"
+                      href="https://dotnet.microsoft.com/download/dotnet/8.0/runtime"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      microsoft.com
+                    </a>{" "}
+                    (pick "Run desktop apps").
+                  </p>
+                </details>
               </div>
             )}
           </section>

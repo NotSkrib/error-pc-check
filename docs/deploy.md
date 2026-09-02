@@ -15,15 +15,45 @@ npx supabase secrets set SSAC_IP_SALT=<32+ random hex>
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected into Edge Functions
 automatically — do not set them.
 
-### Signature DB bucket (optional)
+### Storage bucket `ssac-assets` (public)
 
-The `signatures` function serves the DB from Storage; if the object is missing it
-returns an empty DB and the client falls back to its embedded copy.
+Holds the client download + the signature DB. Create it public:
 
-1. Dashboard → Storage → new bucket `ssac-assets` (private).
-2. Upload `signatures/ssac-signatures.json` to key
-   `signatures/ssac-signatures.json`
-   (or `npx supabase --experimental storage cp signatures/ssac-signatures.json ss://ssac-assets/signatures/ssac-signatures.json`).
+```bash
+curl -X POST "$SUPA_URL/storage/v1/bucket" \
+  -H "authorization: Bearer $SERVICE" -H "apikey: $SERVICE" -H "content-type: application/json" \
+  -d '{"id":"ssac-assets","name":"ssac-assets","public":true}'
+```
+
+Upload:
+
+- **Signature DB** — `signatures/ssac-signatures.json` → key `signatures/ssac-signatures.json`
+  (POST to `$SUPA_URL/storage/v1/object/ssac-assets/signatures/ssac-signatures.json`).
+  If missing, the `signatures` function returns an empty DB and the client uses its embedded copy.
+- **Client binary** — `client/ssac-screenshare.exe`. Publish it first:
+
+  ```bash
+  dotnet publish client/SSAC.Client/SSAC.Client.csproj -c Release \
+    --self-contained false -p:PublishSingleFile=true -p:PublishReadyToRun=false
+  # ~0.6 MB, needs .NET 8 Desktop Runtime on the target machine
+  ```
+
+  Upload with `x-upsert: true` to `$SUPA_URL/storage/v1/object/ssac-assets/client/ssac-screenshare.exe`.
+
+  > The self-contained single-file build (~63 MB, no runtime needed) exceeds the
+  > free-tier 50 MB Storage limit. TODO: host that build on a CDN / GitHub
+  > Release and point an Edge `download` function at it. For now the panel links
+  > the framework-dependent build directly.
+
+### The download link
+
+The panel builds:
+`$SUPA_URL/storage/v1/object/public/ssac-assets/client/ssac-screenshare.exe?download=ssac-screenshare-<KEY>.exe`
+
+Supabase's `?download=` sets `Content-Disposition` so the browser saves the file
+as `ssac-screenshare-<KEY>.exe`; the client reads its own filename to recover the
+key (`Options.KeyFromOwnFilename`) and uses the baked-in `AppInfo.DefaultEndpoint`.
+So the suspect just downloads and double-clicks.
 
 ## Panel
 

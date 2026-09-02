@@ -4,12 +4,12 @@ namespace SSAC.Client;
 
 public static class AppInfo
 {
-    public const string Version = "0.3.0";
+    public const string Version = "0.3.1";
     /// <summary>Set at scan start from the loaded SignatureDb; recorded in the report.</summary>
     public static string SignatureDbVersion { get; set; } = "embedded";
-    // The product ships with the SaaS ingest base URL baked in; overridable for
-    // local dev with --endpoint http://localhost:54321/functions/v1
-    public const string DefaultEndpoint = "https://REPLACE-ME.functions.supabase.co";
+    // SaaS ingest base URL baked in; overridable for local dev with
+    // --endpoint http://localhost:54321/functions/v1
+    public const string DefaultEndpoint = "https://ugxzpmsotzfhoqraohvv.supabase.co/functions/v1";
 }
 
 /// <summary>Best-effort GET of a newer signature DB from the public Edge Function.</summary>
@@ -44,9 +44,27 @@ public sealed record Options(string Key, string Endpoint, string? Pin)
                     break;
             }
         }
+        key ??= KeyFromOwnFilename();
         key ??= PromptForKey();
         if (string.IsNullOrWhiteSpace(key)) return null;
         return new Options(key.Trim(), (endpoint ?? AppInfo.DefaultEndpoint).TrimEnd('/'), pin);
+    }
+
+    /// <summary>
+    /// The panel's download link names the file `ssac-screenshare-&lt;KEY&gt;.exe`, so a
+    /// suspect can just double-click it. Pull the key back out of our own name.
+    /// </summary>
+    private static string? KeyFromOwnFilename()
+    {
+        try
+        {
+            var stem = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? "");
+            var m = System.Text.RegularExpressions.Regex.Match(
+                stem, @"^ssac[-_]screenshare[-_](?<k>[A-Za-z0-9_\-]{16,64})$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return m.Success ? m.Groups["k"].Value : null;
+        }
+        catch { return null; }
     }
 
     private static string? PromptForKey()
