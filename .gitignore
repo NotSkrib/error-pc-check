@@ -31,3 +31,4 @@ Thumbs.db
 seed.out.json
 seed.err.log
 last_sid.txt
+scripts/.client-url
