@@ -37,17 +37,32 @@ dotnet publish client/SSAC.Client/SSAC.Client.csproj -c Release
 
 5. Watch the report fill in live on the panel's report page.
 
-## MVP scan modules (this phase)
+## Scan modules
 
-| Module | Severity signals | Allowlist ref |
-|---|---|---|
-| `environment` | debugger attached, VM, uptime < 5 min | §4.1 |
-| `processes` | known autoclicker process names, unsigned `javaw` | §4.1, T6 |
-| `pipeline-check` | one `info` finding proving the channel works | — |
+Run `ssac-screenshare --selftest` to execute every module locally with no
+network and print the findings (dev smoke test).
 
-Phase 3+ replaces `pipeline-check` with the real forensic collectors (Prefetch,
-BAM/DAM, USN journal, `$MFT`, Recycle Bin, `.minecraft` inspection, known-cheat
-signature DB, and the anti-forensic correlation engine).
+| Module | What it reads | Signals | Priv |
+|---|---|---|---|
+| `environment` | OS build, uptime, VM/debugger, elevation | debugger attached, VM, uptime < 5 min | user |
+| `processes` | running process list + signatures | autoclicker names, unsigned `javaw` (T6) | user |
+| `prefetch` | `C:\Windows\Prefetch\*.pf` names + mtimes | suspicious exe ran; folder empty/wiped (T7) | user\* |
+| `bam` | `bam\State\UserSettings\<SID>` | suspicious exe ran + FILETIME | user\* |
+| `userassist` | `Explorer\UserAssist\*\Count` (ROT13) | GUI-launched suspicious program + run count | user |
+| `shimcache` | `AppCompatCache` blob (Win10/11 `10ts`) | suspicious path present | user |
+| `registry` | RunMRU, TypedPaths, Run keys, MUICache | suspicious autostart / typed path / run | user |
+| `recycle-bin` | `$Recycle.Bin\*\$I*` (v1 + v2) | deleted `.jar`/`.exe`/`.dll`, esp. from `mods\` (T7) | user |
+| `powershell-history` | `PSReadLine\ConsoleHost_history.txt` | download / inject / Defender-tamper commands | user |
+| `usn-journal` | NTFS `$J` via FSCTL | deleted `.pf`, deleted cheat files, bulk wipe (T7) | admin |
+| `amcache` / `mft` | — | not implemented (offline hive / raw NTFS) — Phase 3b | admin |
+| `eventlog` | Security 4688 | process-creation events naming cheats | admin |
+| `correlation` | *(the others' output)* | exec-without-Prefetch on a tampered system; cheat name across ≥2 artifacts; Prefetch wiped but other history survives (**T7 headline**) | — |
+
+\* needs elevation to read on most systems; degrades to a `module_unavailable`
+info finding without it.
+
+Phase 3b: real Amcache.hve + `$MFT` parsers. Phase 4: `.minecraft` inspection +
+the known-cheat signature DB.
 
 ## Not done yet (later phases)
 

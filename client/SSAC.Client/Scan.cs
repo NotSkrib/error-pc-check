@@ -22,6 +22,9 @@ public sealed record Finding(
     string Module, Severity Severity, string Title, string Description,
     object? Evidence = null, DateTimeOffset? OccurredAt = null, int SortKey = 0);
 
+/// <summary>One "this program ran" data point from a forensic artifact.</summary>
+public sealed record ExecEvidence(string Name, string? Path, string Source, DateTimeOffset? When);
+
 /// <summary>Accumulates findings and forwards progress to a sink (the ingest client + UI).</summary>
 public sealed class ScanContext(Func<string, string?, string, int?, Task> progress)
 {
@@ -29,6 +32,15 @@ public sealed class ScanContext(Func<string, string?, string, int?, Task> progre
     public IReadOnlyList<Finding> Findings => _findings;
 
     public void Add(Finding f) => _findings.Add(f);
+
+    // Shared execution-evidence bag: collectors add entries, CorrelationModule reasons over them.
+    private readonly List<ExecEvidence> _exec = [];
+    public IReadOnlyList<ExecEvidence> Executions => _exec;
+    public void NoteExecution(string name, string? path, string source, DateTimeOffset? when)
+        => _exec.Add(new ExecEvidence(name.Trim().ToLowerInvariant(), path, source, when));
+
+    /// <summary>Cross-module hints, e.g. "prefetch:empty", "usn:deleted-pf". Read by CorrelationModule.</summary>
+    public HashSet<string> Signals { get; } = [];
 
     public Task ModuleStart(string module, int pct) => progress("module_start", module, $"scanning {module}", pct);
     public Task ModuleDone(string module, int pct) => progress("module_done", module, $"{module} done", pct);
@@ -182,22 +194,6 @@ public sealed class ProcessListModule : IScanModule
 
         await ctx.Log(Name, $"{total} processes, {unsigned} unsigned");
         await ctx.ModuleDone(Name, 60);
-    }
-}
-
-/// <summary>Phase 2 milestone: emits one finding so the end-to-end pipeline is visible in the panel.</summary>
-public sealed class PipelineCheckModule : IScanModule
-{
-    public string Name => "pipeline-check";
-    public bool RequiresElevation => false;
-
-    public async Task RunAsync(ScanContext ctx, CancellationToken ct)
-    {
-        await ctx.ModuleStart(Name, 70);
-        ctx.Add(new Finding(Name, Severity.Info, "Client reached the panel",
-            "This confirms the client agent uploaded to the panel over a signed channel. Replaced by real detection modules in Phase 3+.",
-            new { AppInfo.Version, at = DateTimeOffset.UtcNow }, SortKey: 100));
-        await ctx.ModuleDone(Name, 80);
     }
 }
 

@@ -63,6 +63,12 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
 
+        if (args.Contains("--selftest"))
+        {
+            SelfTest.Run().GetAwaiter().GetResult();
+            return;
+        }
+
         var opts = Options.Parse(args);
         if (opts is null)
         {
@@ -91,6 +97,51 @@ internal static class Program
                 try { Directory.Delete(d, true); } catch { /* best effort */ }
         }
         catch { /* ignore */ }
+    }
+}
+
+/// <summary>
+/// `--selftest`: runs every scan module locally with no network and prints the
+/// findings. Dev-only smoke test for the Phase 3 forensic collectors.
+/// </summary>
+internal static class SelfTest
+{
+    private static readonly nint _con = AllocConsole();
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")] private static extern nint AllocConsole();
+
+    public static async Task Run()
+    {
+        _ = _con;
+        var ctx = new ScanContext((kind, module, message, _) =>
+        {
+            Console.WriteLine($"  · {kind} {module}: {message}");
+            return Task.CompletedTask;
+        });
+
+        IScanModule[] modules =
+        [
+            new EnvironmentModule(), new ProcessListModule(), new PrefetchModule(), new BamModule(),
+            new UserAssistModule(), new ShimCacheModule(), new RegistryArtifactsModule(),
+            new RecycleBinModule(), new PowerShellHistoryModule(), new UsnJournalModule(),
+            new AmcacheModule(), new MftModule(), new EventLogModule(), new CorrelationModule(),
+        ];
+
+        Console.WriteLine($"SSAC client {AppInfo.Version} — selftest (elevated={EnvironmentModule.IsElevated()})\n");
+        foreach (var m in modules)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            try { await m.RunAsync(ctx, default); }
+            catch (Exception ex) { Console.WriteLine($"  !! {m.Name} threw {ex.GetType().Name}: {ex.Message}"); }
+            Console.WriteLine($"  [{m.Name} {sw.ElapsedMilliseconds} ms]\n");
+        }
+
+        Console.WriteLine($"\n=== {ctx.Findings.Count} findings, verdict {ctx.Verdict.Wire().ToUpperInvariant()} ===");
+        foreach (var f in ctx.Findings.OrderByDescending(x => x.Severity))
+            Console.WriteLine($"[{f.Severity.Wire().ToUpperInvariant(),-8}] {f.Module,-18} {f.Title}");
+        Console.WriteLine($"\n{ctx.Executions.Count} execution-evidence records across "
+            + $"{ctx.Executions.Select(e => e.Name).Distinct().Count()} programs.");
+        Console.WriteLine("\nPress Enter to exit.");
+        Console.ReadLine();
     }
 }
 
@@ -174,18 +225,32 @@ internal sealed class FlowContext : ApplicationContext
         var progress = new ProgressForm(desc.ServerName);
         progress.Show();
 
-        var ctx = new ScanContext(async (kind, module, message, pct) =>
-        {
-            progress.Report(message, pct, $"{kind} {module}: {message}");
-            await ingest.EventAsync(kind, module, message, pct, cts.Token);
-        });
-
         IScanModule[] modules =
         [
             new EnvironmentModule(),
             new ProcessListModule(),
-            new PipelineCheckModule(),
+            new PrefetchModule(),
+            new BamModule(),
+            new UserAssistModule(),
+            new ShimCacheModule(),
+            new RegistryArtifactsModule(),
+            new RecycleBinModule(),
+            new PowerShellHistoryModule(),
+            new UsnJournalModule(),
+            new AmcacheModule(),
+            new MftModule(),
+            new EventLogModule(),
+            new CorrelationModule(), // must run last — reasons over the others
         ];
+
+        var done = 0;
+        var ctx = new ScanContext(async (kind, module, message, _) =>
+        {
+            if (kind == "module_done") Interlocked.Increment(ref done);
+            var pct = (int)(5 + 92.0 * done / modules.Length);
+            progress.Report(message, pct, $"{kind} {module}: {message}");
+            await ingest.EventAsync(kind, module, message, pct, cts.Token);
+        });
 
         var uploadedOk = true;
         await Task.Run(async () =>
