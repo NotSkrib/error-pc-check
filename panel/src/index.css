@@ -18,3 +18,54 @@ body {
   background: #0b0f14;
   color: #e6edf3;
 }
+
+/* watermark: faint on screen, visible in print (tenant + case + timestamp) */
+.report-watermark {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-24deg);
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+  z-index: 0;
+  white-space: nowrap;
+}
+
+@media print {
+  :root {
+    color-scheme: light;
+  }
+  body {
+    background: #fff;
+    color: #111;
+  }
+  .no-print {
+    display: none !important;
+  }
+  header {
+    display: none !important;
+  }
+  main {
+    max-width: none !important;
+  }
+  .report-print {
+    color: #111;
+  }
+  .report-print section,
+  .report-print .rounded-lg,
+  .report-print .rounded {
+    border-color: #ccc !important;
+    background: #fff !important;
+  }
+  .report-watermark {
+    color: rgba(0, 0, 0, 0.06);
+  }
+  a[href]::after {
+    content: "";
+  }
+}

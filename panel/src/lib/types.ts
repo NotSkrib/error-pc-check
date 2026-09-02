@@ -31,6 +31,44 @@ export function worstSeverity(list: Severity[]): Severity {
   );
 }
 
+export function severityRank(s: Severity): number {
+  return SEVERITY_ORDER.indexOf(s);
+}
+
+/** Human labels for the client's module names. */
+export const MODULE_LABEL: Record<string, string> = {
+  environment: "Environment",
+  processes: "Running processes",
+  prefetch: "Prefetch",
+  bam: "BAM / DAM",
+  userassist: "UserAssist",
+  shimcache: "ShimCache",
+  registry: "Registry artifacts",
+  "recycle-bin": "Recycle Bin",
+  "powershell-history": "PowerShell history",
+  minecraft: "Minecraft install",
+  "usn-journal": "USN journal",
+  amcache: "Amcache",
+  mft: "$MFT",
+  eventlog: "Event log",
+  correlation: "Cross-artifact correlation",
+  "pipeline-check": "Pipeline check",
+};
+
+export const moduleLabel = (m: string) => MODULE_LABEL[m] ?? m;
+
+/**
+ * A finding that reports a collector could not run (missing privilege, artifact
+ * absent, not implemented) rather than an actual detection. Per phase-0 §3 these
+ * are emitted as `info` and must be shown as coverage gaps, not findings.
+ */
+export function isCoverageGap(f: { severity: Severity; title: string }): boolean {
+  if (f.severity !== "info") return false;
+  return /not analysed|not readable|not available|not found|no .* history|module_unavailable/i.test(
+    f.title,
+  );
+}
+
 export interface Tenant {
   id: string;
   name: string;

@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import type { SessionRow, Tenant } from "../lib/types";
+import { SEVERITY_CLASS, SEVERITY_LABEL, type Severity, type SessionRow, type Tenant } from "../lib/types";
+
+interface ReportRow {
+  session_id: string;
+  status: string;
+  verdict_severity: Severity;
+}
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
@@ -11,6 +17,7 @@ export default function Dashboard() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [reports, setReports] = useState<Record<string, ReportRow>>({});
   const [loading, setLoading] = useState(true);
   const [newTenant, setNewTenant] = useState("");
   const [caseLabel, setCaseLabel] = useState("");
@@ -39,6 +46,16 @@ export default function Dashboard() {
       .order("created_at", { ascending: false })
       .limit(50);
     setSessions(data ?? []);
+    const ids = (data ?? []).map((s) => s.id);
+    if (ids.length) {
+      const { data: rs } = await supabase
+        .from("reports")
+        .select("session_id,status,verdict_severity")
+        .in("session_id", ids);
+      setReports(Object.fromEntries((rs ?? []).map((r) => [r.session_id, r as ReportRow])));
+    } else {
+      setReports({});
+    }
   }
 
   useEffect(() => {
@@ -174,6 +191,7 @@ export default function Dashboard() {
                     <th className="px-3 py-2">Suspect</th>
                     <th className="px-3 py-2">Key</th>
                     <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2">Verdict</th>
                     <th className="px-3 py-2">Created</th>
                     <th className="px-3 py-2"></th>
                   </tr>
@@ -185,6 +203,21 @@ export default function Dashboard() {
                       <td className="px-3 py-2 opacity-70">{s.suspect_label ?? "—"}</td>
                       <td className="px-3 py-2 font-mono text-xs opacity-60">{s.key_prefix}…</td>
                       <td className="px-3 py-2">{s.status}</td>
+                      <td className="px-3 py-2">
+                        {reports[s.id] ? (
+                          reports[s.id].status === "running" ? (
+                            <span className="text-xs opacity-60">running…</span>
+                          ) : (
+                            <span
+                              className={`rounded border px-1.5 py-0.5 text-xs ${SEVERITY_CLASS[reports[s.id].verdict_severity]}`}
+                            >
+                              {SEVERITY_LABEL[reports[s.id].verdict_severity]}
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-xs opacity-30">—</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 opacity-60">
                         {new Date(s.created_at).toLocaleString()}
                       </td>
@@ -197,7 +230,7 @@ export default function Dashboard() {
                   ))}
                   {sessions.length === 0 && (
                     <tr>
-                      <td className="px-3 py-6 text-center opacity-50" colSpan={6}>
+                      <td className="px-3 py-6 text-center opacity-50" colSpan={7}>
                         No sessions yet.
                       </td>
                     </tr>
