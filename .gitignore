@@ -1,0 +1,23 @@
+# deps
+node_modules/
+# builds
+dist/
+build/
+bin/
+obj/
+# env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.pfx
+signing/
+# supabase local
+supabase/.branches/
+supabase/.temp/
+# editor / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
