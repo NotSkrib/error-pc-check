@@ -46,6 +46,7 @@ network and print the findings (dev smoke test).
 |---|---|---|---|
 | `environment` | OS build, uptime, VM/debugger, elevation | debugger attached, VM, uptime < 5 min | user |
 | `processes` | running process list + signatures | autoclicker names, unsigned `javaw` (T6) | user |
+| `general-cheats` | `bcdedit` boot flags, `Services\*` driver entries, `HKCU\Software\Cheat Engine`, file **names** in Downloads/Desktop/Temp | test-signing / no-integrity-checks on; BYOVD kernel drivers; driver images in temp; injector / aimbot / spoofer / trainer file names | user |
 | `prefetch` | `C:\Windows\Prefetch\*.pf` names + mtimes | suspicious exe ran; folder empty/wiped (T7) | user\* |
 | `bam` | `bam\State\UserSettings\<SID>` | suspicious exe ran + FILETIME | user\* |
 | `userassist` | `Explorer\UserAssist\*\Count` (ROT13) | GUI-launched suspicious program + run count | user |

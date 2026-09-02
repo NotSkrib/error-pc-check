@@ -109,6 +109,23 @@ public class ForensicsHelpersTests
         Assert.True(Forensics.LooksLikeCheat(@"C:\Users\bob\Downloads\Vape_V4.exe"));
         Assert.False(Forensics.LooksLikeCheat(@"C:\Windows\explorer.exe"));
     }
+
+    [Fact]
+    public void CheatHints_cover_general_injection_tooling()
+    {
+        Assert.True(Forensics.LooksLikeCheat("Xenos64.exe"));
+        Assert.True(Forensics.LooksLikeCheat("Extreme Injector v3.exe"));
+        Assert.True(Forensics.LooksLikeCheat("hwid-spoofer.exe"));
+        Assert.True(Forensics.LooksLikeCheat("aimbot.dll"));
+    }
+
+    [Fact]
+    public void VulnerableDrivers_are_lowercase_sys_names()
+    {
+        Assert.Contains("rtcore64.sys", Forensics.VulnerableDrivers);
+        Assert.All(Forensics.VulnerableDrivers, d => Assert.Equal(d.ToLowerInvariant(), d));
+        Assert.All(Forensics.VulnerableDrivers, d => Assert.EndsWith(".sys", d));
+    }
 }
 
 public class ParserTests

@@ -136,7 +136,8 @@ internal static class SelfTest
         var sigDb = SignatureDb.Embedded();
         IScanModule[] modules =
         [
-            new EnvironmentModule(), new ProcessListModule(), new PrefetchModule(), new BamModule(),
+            new EnvironmentModule(), new ProcessListModule(), new GeneralCheatModule(),
+            new PrefetchModule(), new BamModule(),
             new UserAssistModule(), new ShimCacheModule(), new RegistryArtifactsModule(),
             new RecycleBinModule(), new PowerShellHistoryModule(), new MinecraftModule(sigDb),
             new UsnJournalModule(), new AmcacheModule(), new MftModule(), new EventLogModule(),
@@ -251,6 +252,7 @@ internal sealed class FlowContext : ApplicationContext
         [
             new EnvironmentModule(),
             new ProcessListModule(),
+            new GeneralCheatModule(),
             new PrefetchModule(),
             new BamModule(),
             new UserAssistModule(),

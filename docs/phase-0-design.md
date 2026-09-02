@@ -105,6 +105,9 @@ The client may read **only** the following. Anything not listed requires a desig
 - Other known launcher roots: `PrismLauncher/instances/*/`, `.lunarclient/`, `.feather/`, MultiMC, ATLauncher, GDLauncher (same file set).
 - Recycle Bin `$I` index records (original path + delete time) system-wide; `$R` content only for `.jar`/`.exe`/`.dll` under a size cap.
 - Registry (read-only): `...\bam\State\UserSettings\<SID>`, `...\Explorer\UserAssist`, `RecentDocs`, `RunMRU`, `MUICache`, `AppCompatCache`, Run keys, `.minecraft` file assoc.
+- Registry (read-only): `HKLM\SYSTEM\CurrentControlSet\Services\*` — driver/service entries: name, `Type`, `ImagePath`, driver-image signature (general-cheat + BYOVD detection). `HKCU\Software\Cheat Engine` existence.
+- `bcdedit /enum {current}` output — boot flags only (`testsigning`, `nointegritychecks`, `debug`); no modification.
+- File **names only** (never contents) of `*.exe` / `*.dll` / `*.sys` / `*.ahk` under `Downloads`, `Desktop`, and `%TEMP%` (depth ≤ 2), matched against cheat-tool naming.
 - `C:\Windows\Prefetch\*.pf` (metadata + referenced paths).
 - Scheduled Tasks (name, action path, trigger).
 - System info: uptime, boot time, OS build, whether running in a VM, whether a debugger is attached to the client.

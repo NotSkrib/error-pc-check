@@ -6,17 +6,22 @@ namespace SSAC.Client;
 /// <summary>Shared parsing helpers for the Phase 3 out-of-instance forensic collectors.</summary>
 public static class Forensics
 {
-    /// <summary>Substrings that make an executed / deleted file worth flagging (T1, T5, T6).</summary>
+    /// <summary>Substrings that make an executed / deleted file worth flagging (T1, T5, T6, general cheats).</summary>
     public static readonly string[] CheatHints =
     [
-        // known client families (distinctive names only)
+        // known Minecraft client families (distinctive names only)
         "vape", "doomsday", "prestige", "entropy", "novoline", "liquidbounce",
         "wurstclient", "meteorclient", "nightware", "nursultan", "slinky",
         "horion", "fate client", "fateinjector", "zephyr",
-        // technique / tooling words
-        "injector", "inject-helper", "dll-inject", "processhacker",
+        // generic cheat / injection tooling
+        "injector", "inject-helper", "dll-inject", "dllinject", "xenos", "guidedhacking",
+        "extremeinjector", "processhacker", "reclass", "cheatengine", "cheat engine",
+        "unknowncheats", "hwid spoofer", "hwidspoofer", "permspoofer", "spoofer",
+        "aimbot", "triggerbot", "wallhack", "norecoil", "no-recoil", "bhop",
         "killaura", "aimassist", "autoclicker", "autoclick", "ghostclient",
-        "x-ray", "xray-", "-xray",
+        "x-ray", "xray-", "-xray", "esp-", "-esp.dll",
+        // game trainers / unlockers (lower confidence — often single-player, but still cheat tooling)
+        "wemod", "fling trainer", "flingtrainer", "cheathappens", "trainer.exe", "unlocker.exe",
     ];
 
     /// <summary>Legitimate software whose name would otherwise trip a hint (e.g. "cheat" in "EasyAntiCheat").</summary>
@@ -24,6 +29,16 @@ public static class Forensics
     [
         "easyanticheat", "anticheat", "battleye", "vanguard", "ricochet",
         "moonsworth", "com.moonsworth", "lunarclient", "faithful",
+        "systeminformer", "system informer", // legit sysadmin fork of Process Hacker
+    ];
+
+    /// <summary>Kernel drivers commonly abused by cheats via BYOVD (bring-your-own-vulnerable-driver).</summary>
+    public static readonly string[] VulnerableDrivers =
+    [
+        "rtcore64.sys", "gdrv.sys", "gdrv2.sys", "iqvw64e.sys", "winio64.sys", "winio.sys",
+        "winring0x64.sys", "winring0.sys", "dbutil_2_3.sys", "dbutildrv2.sys", "capcom.sys",
+        "asrdrv10.sys", "atillk64.sys", "nvoclock.sys", "phymemx64.sys", "physmem.sys",
+        "kprocesshacker.sys", "procexp152.sys", "speedfan.sys", "hw64.sys",
     ];
 
     public static bool LooksLikeCheat(string s)
