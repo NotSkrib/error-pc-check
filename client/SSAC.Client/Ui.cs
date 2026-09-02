@@ -106,6 +106,11 @@ public sealed class ProgressForm : Form
     private readonly ProgressBar _bar;
     private readonly TextBox _log;
     private readonly Label _status;
+    private readonly Label _heading;
+    private readonly Label _elapsed;
+    private readonly System.Windows.Forms.Timer _tick = new() { Interval = 1000 };
+    private readonly DateTime _started = DateTime.UtcNow;
+    private bool _done;
 
     public ProgressForm(string serverName)
     {
@@ -113,13 +118,25 @@ public sealed class ProgressForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
-        ClientSize = new Size(560, 360);
+        MinimizeBox = false;
+        TopMost = true;
+        ClientSize = new Size(580, 400);
         BackColor = Color.FromArgb(14, 17, 22);
         ForeColor = Color.Gainsboro;
         Font = new Font("Segoe UI", 9.5f);
 
-        _status = new Label { Dock = DockStyle.Top, Height = 28, Padding = new Padding(12, 8, 12, 0), Text = "Starting…" };
-        _bar = new ProgressBar { Dock = DockStyle.Top, Height = 20, Style = ProgressBarStyle.Continuous, Margin = new Padding(12) };
+        _heading = new Label
+        {
+            Dock = DockStyle.Top,
+            Height = 40,
+            Padding = new Padding(14, 12, 14, 0),
+            Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+            ForeColor = Color.White,
+            Text = $"Checking this PC for {serverName}…",
+        };
+        _status = new Label { Dock = DockStyle.Top, Height = 24, Padding = new Padding(14, 2, 14, 0), Text = "Starting…" };
+        _bar = new ProgressBar { Dock = DockStyle.Top, Height = 22, Style = ProgressBarStyle.Continuous, Margin = new Padding(14) };
+        _elapsed = new Label { Dock = DockStyle.Top, Height = 20, Padding = new Padding(14, 0, 14, 0), ForeColor = Color.Gray, Text = "elapsed 0:00 — please leave this window open" };
         _log = new TextBox
         {
             Dock = DockStyle.Fill,
@@ -131,11 +148,21 @@ public sealed class ProgressForm : Form
             Font = new Font("Consolas", 9f),
             BorderStyle = BorderStyle.None,
         };
-        var pad = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12) };
+        var pad = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14) };
         pad.Controls.Add(_log);
         Controls.Add(pad);
+        Controls.Add(_elapsed);
         Controls.Add(_bar);
         Controls.Add(_status);
+        Controls.Add(_heading);
+
+        _tick.Tick += (_, _) =>
+        {
+            if (_done) return;
+            var e = DateTime.UtcNow - _started;
+            _elapsed.Text = $"elapsed {(int)e.TotalMinutes}:{e.Seconds:00} — please leave this window open";
+        };
+        _tick.Start();
     }
 
     public void Report(string status, int? pct, string logLine)
@@ -146,6 +173,19 @@ public sealed class ProgressForm : Form
             _status.Text = status;
             if (pct is int p) _bar.Value = Math.Clamp(p, 0, 100);
             if (!string.IsNullOrEmpty(logLine)) _log.AppendText(logLine + Environment.NewLine);
+        });
+    }
+
+    /// <summary>Flip to a finished state briefly before the summary window opens.</summary>
+    public void MarkDone()
+    {
+        if (IsDisposed) return;
+        BeginInvoke(() =>
+        {
+            _done = true;
+            _bar.Value = 100;
+            _heading.Text = "Finished — sending the report…";
+            _status.Text = "done";
         });
     }
 }
@@ -159,6 +199,8 @@ public sealed class SummaryForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
+        MinimizeBox = false;
+        TopMost = true;
         ClientSize = new Size(560, 420);
         BackColor = Color.FromArgb(14, 17, 22);
         ForeColor = Color.Gainsboro;
@@ -170,10 +212,10 @@ public sealed class SummaryForm : Form
             Height = 52,
             Padding = new Padding(16, 12, 16, 0),
             Font = new Font("Segoe UI", 12f, FontStyle.Bold),
-            ForeColor = Color.White,
+            ForeColor = uploaded ? Color.FromArgb(120, 220, 150) : Color.FromArgb(240, 140, 120),
             Text = uploaded
-                ? $"Scan finished — report sent to {serverName}"
-                : "Scan finished — but the report could NOT be sent",
+                ? $"✓  Done — report sent to {serverName}"
+                : "✗  Scan finished, but the report could NOT be sent",
         };
 
         var list = new TextBox

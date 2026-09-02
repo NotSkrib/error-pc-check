@@ -13,10 +13,11 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 }
 
-/** Public client download with the one-time key baked into the saved filename. */
+/** Client download — the download function validates the key and streams the
+ *  self-contained build, saved as ssac-screenshare-<key>.exe. */
 function downloadUrl(key: string) {
   const base = import.meta.env.VITE_SUPABASE_URL as string;
-  return `${base}/storage/v1/object/public/ssac-assets/client/ssac-screenshare.exe?download=ssac-screenshare-${encodeURIComponent(key)}.exe`;
+  return `${base}/functions/v1/download?key=${encodeURIComponent(key)}`;
 }
 
 export default function Dashboard() {
@@ -207,24 +208,17 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                <p className="text-xs opacity-50">
+                  The download is a self-contained Windows app (~63&nbsp;MB) — nothing to install.
+                  If SmartScreen warns, choose <em>More info → Run anyway</em>.
+                </p>
+
                 <details className="text-xs opacity-70">
                   <summary className="cursor-pointer">Manual / advanced</summary>
                   <p className="mt-1">Raw key (if the person runs the client themselves):</p>
                   <code className="mt-1 block break-all rounded bg-black/40 px-2 py-1 font-mono">
                     {issued.key}
                   </code>
-                  <p className="mt-2">
-                    Needs the .NET 8 Desktop Runtime (x64). If the file won't open, get it from{" "}
-                    <a
-                      className="underline"
-                      href="https://dotnet.microsoft.com/download/dotnet/8.0/runtime"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      microsoft.com
-                    </a>{" "}
-                    (pick "Run desktop apps").
-                  </p>
                 </details>
               </div>
             )}

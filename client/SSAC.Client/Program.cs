@@ -373,7 +373,13 @@ internal sealed class FlowContext : ApplicationContext
         {
             if (kind == "module_done") Interlocked.Increment(ref done);
             var pct = (int)(5 + 92.0 * done / modules.Length);
-            progress.Report(message, pct, $"{kind} {module}: {message}");
+            var status = kind switch
+            {
+                "module_start" => $"Step {Math.Min(done + 1, modules.Length)} of {modules.Length}: {module}",
+                "module_done" => $"{Math.Min(done, modules.Length)} of {modules.Length} checks done",
+                _ => message,
+            };
+            progress.Report(status, pct, $"{kind} {module}: {message}");
             await ingest.EventAsync(kind, module, message, pct, cts.Token);
         });
 
@@ -413,6 +419,8 @@ internal sealed class FlowContext : ApplicationContext
         }
         catch { uploadedOk = false; }
 
+        progress.MarkDone();
+        await Task.Delay(700);
         progress.Close();
         using (var sf = new SummaryForm(desc.ServerName, ctx.Verdict, ctx.Findings, uploadedOk))
         {
