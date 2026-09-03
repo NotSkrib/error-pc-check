@@ -208,10 +208,16 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <p className="text-xs opacity-50">
-                  The download is a self-contained Windows app (~63&nbsp;MB) — nothing to install.
-                  If SmartScreen warns, choose <em>More info → Run anyway</em>.
-                </p>
+                <div className="rounded border border-white/10 bg-black/20 p-2 text-xs opacity-70">
+                  <p className="font-medium opacity-100">Windows will show a blue “unrecognized app” box.</p>
+                  <p className="mt-1">
+                    That is normal for a brand-new tool — click <em>More info</em>, then{" "}
+                    <em>Run anyway</em>. It goes away once the app is code-signed.
+                  </p>
+                  <p className="mt-1 opacity-70">
+                    Self-contained (~64&nbsp;MB), nothing installed, closes itself when done.
+                  </p>
+                </div>
 
                 <details className="text-xs opacity-70">
                   <summary className="cursor-pointer">Manual / advanced</summary>

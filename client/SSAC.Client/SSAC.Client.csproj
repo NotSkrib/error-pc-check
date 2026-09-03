@@ -9,7 +9,23 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>ssac-screenshare</AssemblyName>
     <RootNamespace>SSAC.Client</RootNamespace>
-    <Version>0.2.0</Version>
+
+    <!-- Version + publisher metadata: shows real info in the file's Properties
+         and (once code-signed) in the SmartScreen / UAC publisher line.
+         An unsigned build still triggers SmartScreen's "unrecognized app" —
+         see docs/signing.md; this is the prep so signing is one step. -->
+    <Version>0.3.1</Version>
+    <FileVersion>0.3.1.0</FileVersion>
+    <AssemblyVersion>0.3.1.0</AssemblyVersion>
+    <Company>SSAC</Company>
+    <Product>SSAC Screenshare Tool</Product>
+    <Authors>SSAC</Authors>
+    <AssemblyTitle>SSAC Screenshare Tool</AssemblyTitle>
+    <Description>Consensual Minecraft screenshare / cheat check. Reads program-execution artifacts and Minecraft folders, sends a report to the server that issued the key, then exits. No install.</Description>
+    <Copyright>Copyright (c) 2026 SSAC</Copyright>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
     <!-- single-file, self-contained publish target (see docs/phase-0-design.md §4.1 "Client self") -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
