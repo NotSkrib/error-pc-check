@@ -27,8 +27,38 @@ export default function Dashboard() {
   const [suspect, setSuspect] = useState("");
   const [issued, setIssued] = useState<{ key: string; expires_at: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const tenant = useMemo(() => tenants.find((t) => t.id === tenantId) ?? null, [tenants, tenantId]);
+
+  async function loadRole(tid: string) {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) return;
+    const { data } = await supabase
+      .from("memberships")
+      .select("role")
+      .eq("tenant_id", tid)
+      .eq("user_id", u.user.id)
+      .maybeSingle();
+    setIsAdmin(data?.role === "owner" || data?.role === "admin");
+  }
+
+  async function deleteSession(id: string) {
+    if (!confirm("Delete this session and its report? This can't be undone.")) return;
+    const { error } = await supabase.rpc("delete_session", { p_session: id });
+    if (error) return setErr(error.message);
+    if (tenantId) loadSessions(tenantId);
+  }
+
+  async function clearFinished() {
+    if (!tenantId) return;
+    if (!confirm("Delete every completed / expired / revoked session for this server?")) return;
+    const { data, error } = await supabase.rpc("purge_finished_sessions", { p_tenant: tenantId });
+    if (error) return setErr(error.message);
+    setErr(null);
+    alert(`Deleted ${data} session(s).`);
+    loadSessions(tenantId);
+  }
 
   async function loadTenants(triedGuestJoin = false) {
     const { data, error } = await supabase
@@ -75,7 +105,10 @@ export default function Dashboard() {
     loadTenants();
   }, []);
   useEffect(() => {
-    if (tenantId) loadSessions(tenantId);
+    if (tenantId) {
+      loadSessions(tenantId);
+      loadRole(tenantId);
+    }
   }, [tenantId]);
 
   async function generateKey(e: React.FormEvent) {
@@ -220,7 +253,17 @@ export default function Dashboard() {
           </section>
 
           <section>
-            <h2 className="mb-2 font-semibold">Recent sessions</h2>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="font-semibold">Recent sessions</h2>
+              {isAdmin && (
+                <button
+                  onClick={clearFinished}
+                  className="rounded border border-white/15 px-2 py-1 text-xs opacity-80 hover:bg-white/5"
+                >
+                  Clear finished
+                </button>
+              )}
+            </div>
             <div className="overflow-hidden rounded-lg border border-white/10">
               <table className="w-full text-sm">
                 <thead className="bg-white/5 text-left text-xs uppercase opacity-60">
@@ -261,10 +304,19 @@ export default function Dashboard() {
                       <td className="px-3 py-2 opacity-60">
                         {new Date(s.created_at).toLocaleString()}
                       </td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
                         <Link className="underline opacity-80" to={`/reports/${s.id}`}>
                           view
                         </Link>
+                        {isAdmin && (
+                          <button
+                            onClick={() => deleteSession(s.id)}
+                            className="ml-3 text-sev-high opacity-80 hover:opacity-100"
+                            title="Delete session"
+                          >
+                            delete
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
