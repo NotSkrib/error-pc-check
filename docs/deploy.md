@@ -30,25 +30,25 @@ Upload:
 - **Signature DB** — `signatures/ssac-signatures.json` → key `signatures/ssac-signatures.json`
   (POST to `$SUPA_URL/storage/v1/object/ssac-assets/signatures/ssac-signatures.json`).
   If missing, the `signatures` function returns an empty DB and the client uses its embedded copy.
-- **Client binary** — `client/ssac-screenshare.exe`. Publish it first:
+- **Client binary** — self-contained (no runtime needed), split into <=30 MB
+  parts because it exceeds the free-tier 50 MB Storage limit:
 
   ```bash
-  dotnet publish client/SSAC.Client/SSAC.Client.csproj -c Release \
-    --self-contained false -p:PublishSingleFile=true -p:PublishReadyToRun=false
-  # ~0.6 MB, needs .NET 8 Desktop Runtime on the target machine
+  dotnet publish client/SSAC.Client/SSAC.Client.csproj -c Release -p:PublishReadyToRun=false -p:DebugType=none
+  # ~145 MB. Do NOT add -p:EnableCompressionInSingleFile — a compressed
+  # single-file bundle reads as "packed" to AV heuristics and picks up
+  # false positives on VirusTotal.
+  F=client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe
+  split -b 30m -d "$F" part                      # part00..partNN
+  # upload each part -> ssac-assets/client/parts/partNN  (x-upsert: true)
+  # write ssac-assets/client/parts/manifest.json = {"parts":[...],"bytes":N,"sha256":"..."}
   ```
-
-  Upload with `x-upsert: true` to `$SUPA_URL/storage/v1/object/ssac-assets/client/ssac-screenshare.exe`.
-
-  > The self-contained single-file build (~63 MB, no runtime needed) exceeds the
-  > free-tier 50 MB Storage limit. TODO: host that build on a CDN / GitHub
-  > Release and point an Edge `download` function at it. For now the panel links
-  > the framework-dependent build directly.
 
 ### The download link
 
-The panel builds:
-`$SUPA_URL/storage/v1/object/public/ssac-assets/client/ssac-screenshare.exe?download=ssac-screenshare-<KEY>.exe`
+The `download` Edge Function validates the key, reads `parts/manifest.json`, and
+streams the parts reassembled as `ssac-screenshare-<KEY>.exe`. The panel builds:
+`$SUPA_URL/functions/v1/download?key=<KEY>`
 
 Supabase's `?download=` sets `Content-Disposition` so the browser saves the file
 as `ssac-screenshare-<KEY>.exe`; the client reads its own filename to recover the

@@ -21,42 +21,29 @@ const cmd = process.argv[2];
 
 if (cmd === "seed") {
   const stamp = Date.now();
-  const email = `ssac.e2e.${stamp}@ssacdemo.com`;
-  const password = `E2e-${stamp}-Aa1!`;
 
-  const { data: created, error: cErr } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
+  // Self-serve tenant creation is disabled (migration 0002). Use the real guest
+  // path: anonymous sign-in -> join_as_guest -> create_session.
+  const anon = createClient(URL, ANON, { auth: { persistSession: false } });
+  const { data: sIn, error: sErr } = await anon.auth.signInAnonymously();
+  if (sErr) throw new Error(`anonymous sign-in: ${sErr.message}`);
+  const user = createClient(URL, ANON, {
+    auth: { persistSession: false },
+    global: { headers: { Authorization: `Bearer ${sIn.session.access_token}` } },
   });
-  if (cErr) throw cErr;
-  console.error(`user: ${email} (${created.user.id})`);
 
-  // One client, real in-memory session — exactly how the panel behaves.
-  const user = createClient(URL, ANON, { auth: { persistSession: false } });
-  const { data: signIn, error: sErr } = await user.auth.signInWithPassword({ email, password });
-  if (sErr) throw sErr;
-  const claims = JSON.parse(Buffer.from(signIn.session.access_token.split(".")[1], "base64url").toString());
-  console.error(`signed in — role=${claims.role} sub=${claims.sub}`);
-
-  const slug = `e2e-demo-${stamp}`;
-  const ins = await user.from("tenants").insert({ name: "E2E Demo Server", slug, created_by: created.user.id });
-  if (ins.error) throw new Error(`tenants insert (RLS): ${ins.error.message}`);
-  const { data: tenant, error: selErr } = await user
-    .from("tenants").select("id,name").eq("slug", slug).single();
-  if (selErr) throw selErr;
-  console.error(`tenant (authed insert, RLS OK): ${tenant.name} (${tenant.id})`);
+  const { data: tenantId, error: jErr } = await user.rpc("join_as_guest");
+  if (jErr) throw new Error(`join_as_guest: ${jErr.message}`);
+  console.error(`guest joined tenant ${tenantId}`);
 
   const { data: rpc, error: rErr } = await user.rpc("create_session", {
-    p_tenant: tenant.id, p_case_label: `e2e-${stamp}`, p_suspect_label: "headless-demo",
+    p_tenant: tenantId, p_case_label: `e2e-${stamp}`, p_suspect_label: "headless-demo",
   });
-  if (rErr) throw new Error(`create_session (RLS): ${rErr.message}`);
-  console.error("create_session (authed RPC, RLS OK)");
+  if (rErr) throw new Error(`create_session: ${rErr.message}`);
   const row = Array.isArray(rpc) ? rpc[0] : rpc;
 
   console.log(JSON.stringify({
-    email, password,
-    tenant_id: tenant.id,
+    tenant_id: tenantId,
     session_id: row.session_id,
     key: row.key,
     expires_at: row.expires_at,

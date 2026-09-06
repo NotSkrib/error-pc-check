@@ -54,7 +54,7 @@ export default function Dashboard() {
   async function loadSessions(tid: string) {
     const { data } = await supabase
       .from("sessions")
-      .select("id,tenant_id,case_label,suspect_label,key_prefix,status,created_by,expires_at,consumed_at,created_at")
+      .select("id,tenant_id,case_label,suspect_label,key_prefix,status,created_by,created_by_label,expires_at,consumed_at,created_at")
       .eq("tenant_id", tid)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -227,6 +227,7 @@ export default function Dashboard() {
                   <tr>
                     <th className="px-3 py-2">Case</th>
                     <th className="px-3 py-2">Suspect</th>
+                    <th className="px-3 py-2">By</th>
                     <th className="px-3 py-2">Key</th>
                     <th className="px-3 py-2">Status</th>
                     <th className="px-3 py-2">Verdict</th>
@@ -239,6 +240,7 @@ export default function Dashboard() {
                     <tr key={s.id} className="border-t border-white/5">
                       <td className="px-3 py-2">{s.case_label}</td>
                       <td className="px-3 py-2 opacity-70">{s.suspect_label ?? "—"}</td>
+                      <td className="px-3 py-2 text-xs opacity-60">{s.created_by_label ?? "—"}</td>
                       <td className="px-3 py-2 font-mono text-xs opacity-60">{s.key_prefix}…</td>
                       <td className="px-3 py-2">{s.status}</td>
                       <td className="px-3 py-2">
@@ -268,7 +270,7 @@ export default function Dashboard() {
                   ))}
                   {sessions.length === 0 && (
                     <tr>
-                      <td className="px-3 py-6 text-center opacity-50" colSpan={7}>
+                      <td className="px-3 py-6 text-center opacity-50" colSpan={8}>
                         No sessions yet.
                       </td>
                     </tr>

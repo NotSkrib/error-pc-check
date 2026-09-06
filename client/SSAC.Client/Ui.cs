@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace SSAC.Client;
@@ -6,121 +7,160 @@ namespace SSAC.Client;
 /// <summary>Recorded consent (docs/phase-0-design.md §5). The simple flow records it automatically.</summary>
 public readonly record struct ConsentResult(bool Accepted, DateTimeOffset At, bool BrowserHistoryOptIn);
 
+/// <summary>A small rotating arc — the "spinning circle" activity indicator.</summary>
+public sealed class Spinner : Control
+{
+    private readonly System.Windows.Forms.Timer _t = new() { Interval = 33 };
+    private float _angle;
+
+    public Spinner()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
+        BackColor = Color.Transparent;
+        Size = new Size(44, 44);
+        _t.Tick += (_, _) => { _angle = (_angle + 9f) % 360f; Invalidate(); };
+        _t.Start();
+    }
+
+    public bool Spinning
+    {
+        get => _t.Enabled;
+        set { _t.Enabled = value; Invalidate(); }
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        var pad = 5f;
+        var r = new RectangleF(pad, pad, Width - pad * 2, Height - pad * 2);
+        using var track = new Pen(Color.FromArgb(40, 255, 255, 255), 3f);
+        e.Graphics.DrawEllipse(track, r);
+        if (_t.Enabled)
+        {
+            using var arc = new Pen(Color.FromArgb(235, 235, 235), 3f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            e.Graphics.DrawArc(arc, r, _angle, 90f);
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) _t.Dispose();
+        base.Dispose(disposing);
+    }
+}
+
 /// <summary>
-/// The whole client UI: one small always-on-top window. It auto-starts the scan,
-/// shows progress, and switches to a "done" state with a Close button.
-/// A one-line disclosure keeps it from looking like something it isn't (A1).
+/// The whole client UI: one small always-on-top window. Minimal by request —
+/// a heading, a spinner and a progress bar, nothing about which checks run.
+/// Auto-starts; switches to a "done" state with a Close button.
 /// </summary>
 public sealed class SimpleForm : Form
 {
     private readonly ProgressBar _bar;
     private readonly Label _heading;
-    private readonly Label _status;
+    private readonly Label _sub;
+    private readonly Spinner _spinner;
     private readonly Button _close;
-    private readonly System.Windows.Forms.Timer _tick = new() { Interval = 1000 };
-    private readonly DateTime _started = DateTime.UtcNow;
     private bool _done;
 
     public SimpleForm(string serverName)
     {
-        Text = $"SSAC Screenshare — {serverName}";
+        Text = $"{serverName} Screenshare";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
         TopMost = true;
         ShowInTaskbar = true;
-        ClientSize = new Size(440, 190);
-        BackColor = Color.FromArgb(14, 17, 22);
+        ClientSize = new Size(380, 210);
+        BackColor = Color.FromArgb(12, 13, 16);
         ForeColor = Color.Gainsboro;
         Font = new Font("Segoe UI", 9.5f);
 
+        _spinner = new Spinner { Location = new Point(168, 26) };
+
         _heading = new Label
         {
-            Dock = DockStyle.Top,
-            Height = 34,
-            Padding = new Padding(16, 14, 16, 0),
-            Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
+            Bounds = new Rectangle(0, 84, 380, 30),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Font = new Font("Segoe UI", 13f, FontStyle.Bold),
             ForeColor = Color.White,
-            Text = "Checking this PC…",
+            Text = "Scanning",
         };
-        var disclosure = new Label
+        _sub = new Label
         {
-            Dock = DockStyle.Top,
-            Height = 34,
-            Padding = new Padding(16, 2, 16, 0),
-            ForeColor = Color.Gray,
-            Text = $"Looks for Minecraft cheats and sends a report to {serverName}.\nNothing is installed. This window closes when it's done.",
+            Bounds = new Rectangle(0, 114, 380, 20),
+            TextAlign = ContentAlignment.MiddleCenter,
+            ForeColor = Color.FromArgb(130, 135, 145),
+            Text = "Initializing scan…",
         };
         _bar = new ProgressBar
         {
-            Dock = DockStyle.Top,
-            Height = 22,
-            Margin = new Padding(16, 8, 16, 8),
+            Bounds = new Rectangle(40, 146, 300, 6),
             Style = ProgressBarStyle.Continuous,
         };
-        _status = new Label { Dock = DockStyle.Top, Height = 22, Padding = new Padding(16, 2, 16, 0), ForeColor = Color.Silver, Text = "Starting…" };
         _close = new Button
         {
             Text = "Close",
-            AutoSize = false,
             Size = new Size(90, 30),
-            Dock = DockStyle.Right,
+            Location = new Point(145, 168),
             Enabled = false,
-            BackColor = Color.White,
-            ForeColor = Color.Black,
+            Visible = false,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(28, 30, 36),
+            ForeColor = Color.White,
         };
+        _close.FlatAppearance.BorderColor = Color.FromArgb(70, 74, 82);
         _close.Click += (_, _) => Close();
-        var foot = new Panel { Dock = DockStyle.Bottom, Height = 46, Padding = new Padding(16, 8, 16, 8) };
-        foot.Controls.Add(_close);
 
-        Controls.Add(foot);
-        Controls.Add(_status);
+        Controls.Add(_close);
         Controls.Add(_bar);
-        Controls.Add(disclosure);
+        Controls.Add(_sub);
         Controls.Add(_heading);
-
-        _tick.Tick += (_, _) =>
-        {
-            if (_done) return;
-            var e = DateTime.UtcNow - _started;
-            _status.Text = $"{_status.Tag ?? "Working…"}   ({(int)e.TotalMinutes}:{e.Seconds:00})";
-        };
-        _tick.Start();
+        Controls.Add(_spinner);
     }
 
-    /// <summary>Update progress. Call from any thread.</summary>
+    /// <summary>Update progress. The status string is intentionally not shown.</summary>
     public void Report(string status, int? pct)
     {
+        _ = status;
         if (IsDisposed) return;
         BeginInvoke(() =>
         {
-            _status.Tag = status;
-            if (pct is int p) _bar.Value = Math.Clamp(p, 0, 100);
+            if (_done) return;
+            if (pct is int p)
+            {
+                _bar.Value = Math.Clamp(p, 0, 100);
+                _sub.Text = p < 12 ? "Initializing scan…" : "Scanning…";
+            }
         });
     }
 
     /// <summary>Switch to the finished state and let the user close the window.</summary>
     public void Finish(Severity verdict, int findingCount, bool uploaded)
     {
+        _ = verdict;
+        _ = findingCount;
         if (IsDisposed) return;
         BeginInvoke(() =>
         {
             _done = true;
+            _spinner.Spinning = false;
             _bar.Value = 100;
-            _tick.Stop();
             if (uploaded)
             {
                 _heading.ForeColor = Color.FromArgb(120, 220, 150);
-                _heading.Text = "✓  All done";
-                _status.Text = $"Report sent — {findingCount} item(s) flagged, overall {verdict.Wire().ToUpperInvariant()}.";
+                _heading.Text = "Scan complete";
+                _sub.Text = "You can close this window.";
             }
             else
             {
                 _heading.ForeColor = Color.FromArgb(240, 140, 120);
-                _heading.Text = "Finished, but the report didn't send";
-                _status.Text = "Check the internet connection and ask the staff member for a new link.";
+                _heading.Text = "Couldn't finish";
+                _sub.Text = "Check your internet and ask for a new link.";
             }
+            _close.Visible = true;
             _close.Enabled = true;
             _close.Focus();
         });

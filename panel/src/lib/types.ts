@@ -88,6 +88,7 @@ export interface SessionRow {
   key_prefix: string;
   status: SessionStatus;
   created_by: string;
+  created_by_label: string | null;
   expires_at: string;
   consumed_at: string | null;
   created_at: string;
