@@ -34,12 +34,18 @@ public sealed class Spinner : Control
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
         var pad = 5f;
         var r = new RectangleF(pad, pad, Width - pad * 2, Height - pad * 2);
-        using var track = new Pen(Color.FromArgb(40, 255, 255, 255), 3f);
+        using var track = new Pen(Color.FromArgb(28, 255, 255, 255), 3f);
         e.Graphics.DrawEllipse(track, r);
         if (_t.Enabled)
         {
-            using var arc = new Pen(Color.FromArgb(235, 235, 235), 3f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-            e.Graphics.DrawArc(arc, r, _angle, 90f);
+            using var arc = new Pen(Color.FromArgb(0xE5, 0x48, 0x4D), 3f)
+            { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            e.Graphics.DrawArc(arc, r, _angle, 100f);
+        }
+        else
+        {
+            using var done = new Pen(Color.FromArgb(0x37, 0xB2, 0x6A), 3f) { StartCap = LineCap.Round };
+            e.Graphics.DrawArc(done, r, -90f, 360f);
         }
     }
 
@@ -73,12 +79,16 @@ public sealed class SimpleForm : Form
         MinimizeBox = false;
         TopMost = true;
         ShowInTaskbar = true;
-        ClientSize = new Size(380, 210);
-        BackColor = Color.FromArgb(12, 13, 16);
+        ClientSize = new Size(380, 214);
+        BackColor = Color.FromArgb(0x0C, 0x0D, 0x10);
         ForeColor = Color.Gainsboro;
         Font = new Font("Segoe UI", 9.5f);
 
-        _spinner = new Spinner { Location = new Point(168, 26) };
+        // thin brand accent along the top
+        var accent = new Panel { Bounds = new Rectangle(0, 0, 380, 2), BackColor = Color.FromArgb(0xE5, 0x48, 0x4D) };
+        Controls.Add(accent);
+
+        _spinner = new Spinner { Location = new Point(168, 30) };
 
         _heading = new Label
         {

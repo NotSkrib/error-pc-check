@@ -129,210 +129,230 @@ export default function Dashboard() {
     loadSessions(tenantId);
   }
 
-  if (loading) return <p className="text-sm opacity-60">Loading…</p>;
+  if (loading)
+    return <div className="py-20 text-center text-sm text-fg-dim">Loading…</div>;
+
+  if (tenants.length === 0)
+    return (
+      <div className="card mx-auto max-w-md p-6">
+        <h2 className="text-base font-semibold">No access yet</h2>
+        <p className="mt-1.5 text-sm text-fg-mut">
+          This account isn't attached to Error SMP. Ask an admin to add you, or sign out and use{" "}
+          <span className="text-fg">Continue as guest</span>.
+        </p>
+        {err && <p className="mt-3 text-sm text-brand">{err}</p>}
+      </div>
+    );
+
+  const dl = issued ? downloadUrl(issued.key) : "";
 
   return (
-    <div className="space-y-8">
-      {tenants.length === 0 ? (
-        <div className="max-w-md space-y-2">
-          <h2 className="font-semibold">No access yet</h2>
-          <p className="text-sm opacity-60">
-            This account isn't attached to a server. Ask an Error SMP admin to add you, or go back and
-            use <span className="opacity-90">Continue as guest</span>.
-          </p>
-          {err && <p className="text-sm text-sev-high">{err}</p>}
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center gap-3">
-            {tenants.length > 1 ? (
-              <>
-                <label className="text-sm opacity-60">Server</label>
-                <select
-                  className="rounded border border-white/15 bg-transparent px-2 py-1 text-sm"
-                  value={tenantId ?? ""}
-                  onChange={(e) => setTenantId(e.target.value)}
-                >
-                  {tenants.map((t) => (
-                    <option key={t.id} value={t.id} className="bg-black">
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : (
-              <span className="text-sm font-medium">{tenant?.name}</span>
-            )}
-            {tenant && (
-              <span className="text-xs opacity-40">
-                keys expire 30 min · reports kept {tenant.retention_days}d
-              </span>
-            )}
+    <div className="space-y-6">
+      {/* context bar */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {tenants.length > 1 ? (
+          <select
+            className="input w-auto py-1.5"
+            value={tenantId ?? ""}
+            onChange={(e) => setTenantId(e.target.value)}
+          >
+            {tenants.map((t) => (
+              <option key={t.id} value={t.id} className="bg-ink-1">
+                {t.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <h1 className="text-lg font-semibold tracking-tight">{tenant?.name}</h1>
+        )}
+        {tenant && (
+          <div className="flex gap-1.5 text-[11px] text-fg-dim">
+            <span className="chip border-ink-line">keys expire 30 min</span>
+            <span className="chip border-ink-line">reports kept {tenant.retention_days}d</span>
           </div>
+        )}
+      </div>
 
-          <section className="rounded-lg border border-white/10 p-4">
-            <h2 className="font-semibold">New screenshare key</h2>
-            <form onSubmit={generateKey} className="mt-3 flex flex-wrap items-end gap-3">
-              <div>
-                <label className="block text-xs opacity-60">Case label</label>
-                <input
-                  className="rounded border border-white/15 bg-transparent px-3 py-2 text-sm"
-                  placeholder="e.g. #cheat-report-412"
-                  value={caseLabel}
-                  onChange={(e) => setCaseLabel(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs opacity-60">Suspect (optional)</label>
-                <input
-                  className="rounded border border-white/15 bg-transparent px-3 py-2 text-sm"
-                  placeholder="MC username"
-                  value={suspect}
-                  onChange={(e) => setSuspect(e.target.value)}
-                />
-              </div>
-              <button className="rounded bg-white/90 px-3 py-2 text-sm font-medium text-black">
-                Generate
-              </button>
-            </form>
-            {err && <p className="mt-2 text-sm text-sev-high">{err}</p>}
-            {issued && (
-              <div className="mt-3 space-y-3 rounded border border-sev-info/40 bg-sev-info/10 p-3 text-sm">
-                <p className="opacity-70">
-                  Send this download link to the person. The file has the key built into its name —
-                  they just download and run it. Works once, expires{" "}
-                  {new Date(issued.expires_at).toLocaleTimeString()}.
-                </p>
-
-                <div>
-                  <label className="block text-xs opacity-60">Download link</label>
-                  <div className="mt-1 flex gap-2">
-                    <input
-                      readOnly
-                      className="flex-1 rounded bg-black/40 px-2 py-1.5 font-mono text-xs"
-                      value={downloadUrl(issued.key)}
-                      onFocus={(e) => e.currentTarget.select()}
-                    />
-                    <button
-                      type="button"
-                      className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/5"
-                      onClick={() => navigator.clipboard?.writeText(downloadUrl(issued.key))}
-                    >
-                      Copy
-                    </button>
-                    <a
-                      href={downloadUrl(issued.key)}
-                      className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/5"
-                    >
-                      Test
-                    </a>
-                  </div>
-                </div>
-
-                <div className="rounded border border-white/10 bg-black/20 p-2 text-xs opacity-70">
-                  <p className="font-medium opacity-100">Windows will show a blue “unrecognized app” box.</p>
-                  <p className="mt-1">
-                    That is normal for a brand-new tool — click <em>More info</em>, then{" "}
-                    <em>Run anyway</em>. It goes away once the app is code-signed.
-                  </p>
-                  <p className="mt-1 opacity-70">
-                    Self-contained (~64&nbsp;MB), nothing installed, closes itself when done.
-                  </p>
-                </div>
-
-                <details className="text-xs opacity-70">
-                  <summary className="cursor-pointer">Manual / advanced</summary>
-                  <p className="mt-1">Raw key (if the person runs the client themselves):</p>
-                  <code className="mt-1 block break-all rounded bg-black/40 px-2 py-1 font-mono">
-                    {issued.key}
-                  </code>
-                </details>
-              </div>
-            )}
-          </section>
-
-          <section>
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="font-semibold">Recent sessions</h2>
-              {isAdmin && (
-                <button
-                  onClick={clearFinished}
-                  className="rounded border border-white/15 px-2 py-1 text-xs opacity-80 hover:bg-white/5"
-                >
-                  Clear finished
-                </button>
-              )}
+      {/* new key */}
+      <section className="card overflow-hidden">
+        <div className="border-b border-ink-line px-5 py-3">
+          <h2 className="text-sm font-semibold">New screenshare</h2>
+        </div>
+        <div className="p-5">
+          <form onSubmit={generateKey} className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[200px] flex-1">
+              <label className="label">Case</label>
+              <input
+                className="input mt-1"
+                placeholder="#cheat-report-412"
+                value={caseLabel}
+                onChange={(e) => setCaseLabel(e.target.value)}
+                required
+              />
             </div>
-            <div className="overflow-hidden rounded-lg border border-white/10">
-              <table className="w-full text-sm">
-                <thead className="bg-white/5 text-left text-xs uppercase opacity-60">
-                  <tr>
-                    <th className="px-3 py-2">Case</th>
-                    <th className="px-3 py-2">Suspect</th>
-                    <th className="px-3 py-2">By</th>
-                    <th className="px-3 py-2">Key</th>
-                    <th className="px-3 py-2">Status</th>
-                    <th className="px-3 py-2">Verdict</th>
-                    <th className="px-3 py-2">Created</th>
-                    <th className="px-3 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sessions.map((s) => (
-                    <tr key={s.id} className="border-t border-white/5">
-                      <td className="px-3 py-2">{s.case_label}</td>
-                      <td className="px-3 py-2 opacity-70">{s.suspect_label ?? "—"}</td>
-                      <td className="px-3 py-2 text-xs opacity-60">{s.created_by_label ?? "—"}</td>
-                      <td className="px-3 py-2 font-mono text-xs opacity-60">{s.key_prefix}…</td>
-                      <td className="px-3 py-2">{s.status}</td>
-                      <td className="px-3 py-2">
-                        {reports[s.id] ? (
-                          reports[s.id].status === "running" ? (
-                            <span className="text-xs opacity-60">running…</span>
+            <div className="min-w-[180px] flex-1">
+              <label className="label">Suspect · optional</label>
+              <input
+                className="input mt-1"
+                placeholder="MC username"
+                value={suspect}
+                onChange={(e) => setSuspect(e.target.value)}
+              />
+            </div>
+            <button className="btn btn-primary h-[38px] px-4">Generate key</button>
+          </form>
+          {err && <p className="mt-3 text-sm text-brand">{err}</p>}
+
+          {issued && (
+            <div className="mt-5 rounded-xl border border-brand/25 bg-brand/[0.06] p-4 shadow-glow">
+              <p className="text-sm text-fg-mut">
+                Send this link to the person. The key is baked into the filename — they just
+                download and run it. Works once · expires{" "}
+                <span className="text-fg">{new Date(issued.expires_at).toLocaleTimeString()}</span>.
+              </p>
+
+              <div className="mt-3">
+                <label className="label">Download link</label>
+                <div className="mt-1 flex gap-2">
+                  <input
+                    readOnly
+                    className="input flex-1 font-mono text-xs"
+                    value={dl}
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    type="button"
+                    className="btn px-3"
+                    onClick={() => navigator.clipboard?.writeText(dl)}
+                  >
+                    Copy
+                  </button>
+                  <a href={dl} className="btn px-3">
+                    Test
+                  </a>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-ink-line bg-ink-0/60 p-3 text-xs text-fg-mut">
+                <span className="font-medium text-fg">Windows shows a blue “unrecognized app” box</span>{" "}
+                — normal for a new tool. Click <em>More info → Run anyway</em>. Self-contained
+                (~140&nbsp;MB), nothing installed, closes itself when done.
+              </div>
+
+              <details className="mt-2 text-xs text-fg-mut">
+                <summary className="cursor-pointer select-none">Raw key</summary>
+                <code className="mt-1 block break-all rounded-lg bg-ink-0/60 p-2 font-mono text-fg">
+                  {issued.key}
+                </code>
+              </details>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* sessions */}
+      <section className="card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-ink-line px-5 py-3">
+          <h2 className="text-sm font-semibold">
+            Sessions <span className="ml-1 text-fg-dim">{sessions.length}</span>
+          </h2>
+          {isAdmin && sessions.length > 0 && (
+            <button onClick={clearFinished} className="btn btn-ghost px-2.5 py-1 text-xs">
+              Clear finished
+            </button>
+          )}
+        </div>
+
+        {sessions.length === 0 ? (
+          <div className="px-5 py-14 text-center text-sm text-fg-dim">
+            No sessions yet — generate a key above.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-ink-line text-left text-[11px] uppercase tracking-[0.12em] text-fg-dim">
+                  <th className="px-5 py-2.5 font-medium">Case</th>
+                  <th className="px-3 py-2.5 font-medium">Suspect</th>
+                  <th className="px-3 py-2.5 font-medium">By</th>
+                  <th className="px-3 py-2.5 font-medium">Key</th>
+                  <th className="px-3 py-2.5 font-medium">Status</th>
+                  <th className="px-3 py-2.5 font-medium">Verdict</th>
+                  <th className="px-3 py-2.5 font-medium">Created</th>
+                  <th className="px-5 py-2.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {sessions.map((s) => {
+                  const r = reports[s.id];
+                  return (
+                    <tr
+                      key={s.id}
+                      className="group border-b border-ink-line/60 transition-colors last:border-0 hover:bg-white/[0.02]"
+                    >
+                      <td className="px-5 py-3 font-medium">{s.case_label}</td>
+                      <td className="px-3 py-3 text-fg-mut">{s.suspect_label ?? "—"}</td>
+                      <td className="px-3 py-3 text-xs text-fg-mut">{s.created_by_label ?? "—"}</td>
+                      <td className="px-3 py-3 font-mono text-xs text-fg-dim">{s.key_prefix}…</td>
+                      <td className="px-3 py-3">
+                        <span className="inline-flex items-center gap-1.5 text-xs text-fg-mut">
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              s.status === "completed"
+                                ? "bg-sev-clean"
+                                : s.status === "pending" || s.status === "consumed"
+                                  ? "bg-sev-info"
+                                  : "bg-fg-dim"
+                            }`}
+                          />
+                          {s.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        {r ? (
+                          r.status === "running" ? (
+                            <span className="text-xs text-fg-dim">running…</span>
                           ) : (
-                            <span
-                              className={`rounded border px-1.5 py-0.5 text-xs ${SEVERITY_CLASS[reports[s.id].verdict_severity]}`}
-                            >
-                              {SEVERITY_LABEL[reports[s.id].verdict_severity]}
+                            <span className={`chip ${SEVERITY_CLASS[r.verdict_severity]}`}>
+                              {SEVERITY_LABEL[r.verdict_severity]}
                             </span>
                           )
                         ) : (
-                          <span className="text-xs opacity-30">—</span>
+                          <span className="text-xs text-fg-dim">—</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 opacity-60">
-                        {new Date(s.created_at).toLocaleString()}
+                      <td className="px-3 py-3 text-xs text-fg-dim">
+                        {new Date(s.created_at).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap">
-                        <Link className="underline opacity-80" to={`/reports/${s.id}`}>
-                          view
+                      <td className="px-5 py-3 text-right whitespace-nowrap">
+                        <Link
+                          className="text-xs font-medium text-fg-mut hover:text-fg"
+                          to={`/reports/${s.id}`}
+                        >
+                          View
                         </Link>
                         {isAdmin && (
                           <button
                             onClick={() => deleteSession(s.id)}
-                            className="ml-3 text-sev-high opacity-80 hover:opacity-100"
-                            title="Delete session"
+                            className="ml-3 text-xs text-fg-dim opacity-0 transition hover:text-brand group-hover:opacity-100"
                           >
-                            delete
+                            Delete
                           </button>
                         )}
                       </td>
                     </tr>
-                  ))}
-                  {sessions.length === 0 && (
-                    <tr>
-                      <td className="px-3 py-6 text-center opacity-50" colSpan={8}>
-                        No sessions yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
-      )}
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

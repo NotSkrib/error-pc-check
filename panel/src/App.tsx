@@ -7,27 +7,42 @@ import ReportView from "./pages/ReportView";
 function Shell({ children }: { children: React.ReactNode }) {
   const { session, signOut } = useAuth();
   const nav = useNavigate();
+  const isGuest = session?.user.is_anonymous;
+  const who = isGuest
+    ? (session?.user.user_metadata?.display_name as string | undefined) ?? "Guest"
+    : session?.user.email;
+
   return (
     <div className="min-h-full">
-      <header className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-        <Link to="/" className="font-semibold tracking-tight">
-          <span className="mr-2 inline-block h-4 w-4 -mb-0.5 rounded bg-[#e5484d]" />
-          Error SMP <span className="opacity-50">· Screenshare</span>
-        </Link>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="opacity-60">{session?.user.email}</span>
-          <button
-            className="rounded border border-white/15 px-2 py-1 hover:bg-white/5"
-            onClick={async () => {
-              await signOut();
-              nav("/login");
-            }}
-          >
-            Sign out
-          </button>
+      <div className="h-px bg-gradient-to-r from-transparent via-brand/70 to-transparent" />
+      <header className="sticky top-0 z-30 border-b border-ink-line bg-ink-0/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
+          <Link to="/" className="group flex items-center gap-2.5">
+            <span className="brandmark">E</span>
+            <span className="text-[15px] font-semibold tracking-tight text-fg">
+              Error&nbsp;SMP <span className="font-normal text-fg-dim">/ Screenshare</span>
+            </span>
+          </Link>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="flex items-center gap-1.5 text-fg-mut">
+              {isGuest && (
+                <span className="chip border-ink-line2 text-fg-mut">guest</span>
+              )}
+              <span className="max-w-[200px] truncate">{who}</span>
+            </span>
+            <button
+              className="btn btn-ghost px-2.5 py-1.5"
+              onClick={async () => {
+                await signOut();
+                nav("/login");
+              }}
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-5 py-6">{children}</main>
+      <main className="mx-auto max-w-5xl px-5 py-8">{children}</main>
     </div>
   );
 }

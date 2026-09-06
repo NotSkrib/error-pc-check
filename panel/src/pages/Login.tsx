@@ -12,9 +12,7 @@ export default function Login() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<"none" | "signin" | "guest">("none");
 
-  if (session) {
-    nav("/", { replace: true });
-  }
+  if (session) nav("/", { replace: true });
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -37,7 +35,6 @@ export default function Login() {
       setBusy("none");
       return setErr(error.message);
     }
-    // attach to the Error SMP tenant with the guest role, under this name
     const { error: joinErr } = await supabase.rpc("join_as_guest", { p_name: name });
     setBusy("none");
     if (joinErr) return setErr(joinErr.message);
@@ -45,67 +42,68 @@ export default function Login() {
   }
 
   return (
-    <div className="mx-auto mt-24 max-w-sm px-5">
-      <div className="mb-6 flex items-center gap-2">
-        <span className="inline-block h-6 w-6 rounded bg-[#e5484d]" />
-        <h1 className="text-lg font-semibold">
-          Error SMP <span className="opacity-50">· Screenshare</span>
-        </h1>
+    <div className="relative flex min-h-full items-center justify-center px-5 py-16">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex items-center gap-2.5">
+          <span className="brandmark h-7 w-7 text-sm">E</span>
+          <div className="leading-tight">
+            <div className="text-[15px] font-semibold tracking-tight">Error SMP</div>
+            <div className="text-xs text-fg-dim">Screenshare console</div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <form onSubmit={continueAsGuest} className="space-y-2.5">
+            <label className="label">Run a check now</label>
+            <input
+              className="input"
+              placeholder="Your name (e.g. Discord name)"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              maxLength={40}
+              required
+            />
+            <button disabled={busy !== "none"} className="btn btn-primary w-full py-2.5">
+              {busy === "guest" ? "Setting up…" : "Continue as guest"}
+            </button>
+          </form>
+          <p className="mt-2 text-xs text-fg-dim">
+            Guests get screenshare keys and see their own checks. Your name is attached to them.
+          </p>
+
+          <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-fg-dim">
+            <span className="h-px flex-1 bg-ink-line2" /> staff <span className="h-px flex-1 bg-ink-line2" />
+          </div>
+
+          <form onSubmit={signIn} className="space-y-2.5">
+            <input
+              className="input"
+              type="email"
+              placeholder="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              className="input"
+              type="password"
+              placeholder="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button className="btn w-full" disabled={busy !== "none"}>
+              {busy === "signin" ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+
+          {err && <p className="mt-3 text-sm text-brand">{err}</p>}
+        </div>
+
+        <p className="mt-4 text-center text-xs text-fg-dim">
+          No public sign-up — an admin provisions staff accounts.
+        </p>
       </div>
-
-      <form onSubmit={continueAsGuest} className="space-y-2">
-        <input
-          className="w-full rounded border border-white/15 bg-transparent px-3 py-2 text-sm"
-          placeholder="Your name (e.g. your Discord name)"
-          value={guestName}
-          onChange={(e) => setGuestName(e.target.value)}
-          maxLength={40}
-          required
-        />
-        <button
-          disabled={busy !== "none"}
-          className="w-full rounded bg-[#e5484d] px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {busy === "guest" ? "Setting up…" : "Continue as guest"}
-        </button>
-      </form>
-      <p className="mt-2 text-xs opacity-50">
-        Guests can generate screenshare keys and view reports. Your name shows next to the checks you run.
-      </p>
-
-      <div className="my-6 flex items-center gap-3 text-xs opacity-40">
-        <span className="h-px flex-1 bg-white/15" /> staff login <span className="h-px flex-1 bg-white/15" />
-      </div>
-
-      <form onSubmit={signIn} className="space-y-3">
-        <input
-          className="w-full rounded border border-white/15 bg-transparent px-3 py-2 text-sm"
-          type="email"
-          placeholder="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          className="w-full rounded border border-white/15 bg-transparent px-3 py-2 text-sm"
-          type="password"
-          placeholder="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        {err && <p className="text-sm text-sev-high">{err}</p>}
-        <button
-          className="w-full rounded border border-white/20 px-3 py-2 text-sm font-medium disabled:opacity-50"
-          disabled={busy !== "none"}
-        >
-          {busy === "signin" ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
-
-      <p className="mt-6 text-xs opacity-40">
-        No public sign-up. An admin provisions staff accounts.
-      </p>
     </div>
   );
 }
