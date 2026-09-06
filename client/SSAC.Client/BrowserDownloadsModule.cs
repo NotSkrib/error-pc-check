@@ -64,14 +64,18 @@ public sealed class BrowserDownloadsModule : IScanModule
         return hits;
     }
 
-    /// <summary>Copy the locked DB to temp and open it read-only.</summary>
+    /// <summary>
+    /// Open the DB read-only IN PLACE — no copy to %TEMP%. `mode=ro&immutable=1`
+    /// lets SQLite read a file the browser has open without taking any locks.
+    /// Reading it where it lives (not staging a copy in temp) avoids the classic
+    /// infostealer IOC that AV heuristics pattern-match on.
+    /// </summary>
     private static SqliteConnection? OpenCopy(string dbPath)
     {
         try
         {
-            var tmp = Path.Combine(Path.GetTempPath(), $"ssac-{Guid.NewGuid():N}.db");
-            File.Copy(dbPath, tmp, overwrite: true);
-            var c = new SqliteConnection($"Data Source={tmp};Mode=ReadOnly;Cache=Private");
+            var fileUri = "file:///" + dbPath.Replace('\\', '/').Replace(" ", "%20") + "?mode=ro&immutable=1";
+            var c = new SqliteConnection($"Data Source={fileUri};Cache=Private");
             c.Open();
             return c;
         }

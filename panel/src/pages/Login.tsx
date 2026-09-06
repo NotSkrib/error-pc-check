@@ -8,6 +8,7 @@ export default function Login() {
   const { session } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [guestName, setGuestName] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<"none" | "signin" | "guest">("none");
 
@@ -25,7 +26,10 @@ export default function Login() {
     nav("/", { replace: true });
   }
 
-  async function continueAsGuest() {
+  async function continueAsGuest(e: React.FormEvent) {
+    e.preventDefault();
+    const name = guestName.trim();
+    if (!name) return setErr("Enter a name so staff can see who ran each check.");
     setErr(null);
     setBusy("guest");
     const { error } = await supabase.auth.signInAnonymously();
@@ -33,8 +37,8 @@ export default function Login() {
       setBusy("none");
       return setErr(error.message);
     }
-    // attach to the Error SMP tenant with the guest role
-    const { error: joinErr } = await supabase.rpc("join_as_guest");
+    // attach to the Error SMP tenant with the guest role, under this name
+    const { error: joinErr } = await supabase.rpc("join_as_guest", { p_name: name });
     setBusy("none");
     if (joinErr) return setErr(joinErr.message);
     nav("/", { replace: true });
@@ -49,15 +53,24 @@ export default function Login() {
         </h1>
       </div>
 
-      <button
-        onClick={continueAsGuest}
-        disabled={busy !== "none"}
-        className="w-full rounded bg-[#e5484d] px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {busy === "guest" ? "Setting up…" : "Continue as guest"}
-      </button>
+      <form onSubmit={continueAsGuest} className="space-y-2">
+        <input
+          className="w-full rounded border border-white/15 bg-transparent px-3 py-2 text-sm"
+          placeholder="Your name (e.g. your Discord name)"
+          value={guestName}
+          onChange={(e) => setGuestName(e.target.value)}
+          maxLength={40}
+          required
+        />
+        <button
+          disabled={busy !== "none"}
+          className="w-full rounded bg-[#e5484d] px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {busy === "guest" ? "Setting up…" : "Continue as guest"}
+        </button>
+      </form>
       <p className="mt-2 text-xs opacity-50">
-        Guests can generate screenshare keys and view reports. No account needed.
+        Guests can generate screenshare keys and view reports. Your name shows next to the checks you run.
       </p>
 
       <div className="my-6 flex items-center gap-3 text-xs opacity-40">
