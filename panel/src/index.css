@@ -76,22 +76,6 @@ body {
   }
 }
 
-.report-watermark {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: rotate(-24deg);
-  font-size: 42px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  color: rgba(255, 255, 255, 0.035);
-  pointer-events: none;
-  z-index: 0;
-  white-space: nowrap;
-}
-
 @media print {
   :root {
     color-scheme: light;
@@ -119,9 +103,6 @@ body {
     border-color: #ccc !important;
     background: #fff !important;
     box-shadow: none !important;
-  }
-  .report-watermark {
-    color: rgba(0, 0, 0, 0.06);
   }
   a[href]::after {
     content: "";

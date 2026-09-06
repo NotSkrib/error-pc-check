@@ -152,15 +152,10 @@ export default function ReportView() {
     | null
     | undefined;
   const env = report?.environment as Record<string, unknown> | null | undefined;
-  const generatedAt = new Date().toLocaleString();
   const lastPct = [...events].reverse().find((e) => e.pct != null)?.pct ?? null;
 
   return (
     <div className="report-print space-y-6">
-      <div className="report-watermark" aria-hidden>
-        {tenantName} · {session.case_label} · {generatedAt}
-      </div>
-
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">{session.case_label}</h1>
