@@ -27,7 +27,11 @@ additional_redirect_urls = [
   "http://localhost:5173/**"
 ]
 jwt_expiry = 3600
+# GoTrue blocks anonymous sign-ins when enable_signup is false, so this stays
+# on. The panel has NO sign-up UI; a stray API signup gets no tenant membership
+# and can see/do nothing (RLS). Guests use anonymous auth + join_as_guest().
 enable_signup = true
+enable_anonymous_sign_ins = true
 
 [auth.email]
 enable_signup = true

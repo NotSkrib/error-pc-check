@@ -6,37 +6,65 @@ import { useAuth } from "../auth";
 export default function Login() {
   const nav = useNavigate();
   const { session } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"none" | "signin" | "guest">("none");
 
   if (session) {
     nav("/", { replace: true });
   }
 
-  async function submit(e: React.FormEvent) {
+  async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    setBusy(true);
-    const fn =
-      mode === "signin"
-        ? supabase.auth.signInWithPassword({ email, password })
-        : supabase.auth.signUp({ email, password });
-    const { error } = await fn;
-    setBusy(false);
+    setBusy("signin");
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setBusy("none");
     if (error) return setErr(error.message);
+    nav("/", { replace: true });
+  }
+
+  async function continueAsGuest() {
+    setErr(null);
+    setBusy("guest");
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      setBusy("none");
+      return setErr(error.message);
+    }
+    // attach to the Error SMP tenant with the guest role
+    const { error: joinErr } = await supabase.rpc("join_as_guest");
+    setBusy("none");
+    if (joinErr) return setErr(joinErr.message);
     nav("/", { replace: true });
   }
 
   return (
     <div className="mx-auto mt-24 max-w-sm px-5">
-      <h1 className="text-lg font-semibold">SSAC panel</h1>
-      <p className="mt-1 text-sm opacity-60">
-        {mode === "signin" ? "Sign in to your staff account." : "Create a staff account."}
+      <div className="mb-6 flex items-center gap-2">
+        <span className="inline-block h-6 w-6 rounded bg-[#e5484d]" />
+        <h1 className="text-lg font-semibold">
+          Error SMP <span className="opacity-50">· Screenshare</span>
+        </h1>
+      </div>
+
+      <button
+        onClick={continueAsGuest}
+        disabled={busy !== "none"}
+        className="w-full rounded bg-[#e5484d] px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+      >
+        {busy === "guest" ? "Setting up…" : "Continue as guest"}
+      </button>
+      <p className="mt-2 text-xs opacity-50">
+        Guests can generate screenshare keys and view reports. No account needed.
       </p>
-      <form onSubmit={submit} className="mt-6 space-y-3">
+
+      <div className="my-6 flex items-center gap-3 text-xs opacity-40">
+        <span className="h-px flex-1 bg-white/15" /> staff login <span className="h-px flex-1 bg-white/15" />
+      </div>
+
+      <form onSubmit={signIn} className="space-y-3">
         <input
           className="w-full rounded border border-white/15 bg-transparent px-3 py-2 text-sm"
           type="email"
@@ -52,24 +80,18 @@ export default function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          minLength={8}
         />
         {err && <p className="text-sm text-sev-high">{err}</p>}
         <button
-          className="w-full rounded bg-white/90 px-3 py-2 text-sm font-medium text-black disabled:opacity-50"
-          disabled={busy}
+          className="w-full rounded border border-white/20 px-3 py-2 text-sm font-medium disabled:opacity-50"
+          disabled={busy !== "none"}
         >
-          {mode === "signin" ? "Sign in" : "Sign up"}
+          {busy === "signin" ? "Signing in…" : "Sign in"}
         </button>
       </form>
-      <button
-        className="mt-4 text-xs opacity-60 underline"
-        onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-      >
-        {mode === "signin" ? "Need an account? Sign up" : "Have an account? Sign in"}
-      </button>
+
       <p className="mt-6 text-xs opacity-40">
-        TOTP 2FA enrolment for owners/admins is added in Phase 1 follow-up (Supabase MFA).
+        No public sign-up. An admin provisions staff accounts.
       </p>
     </div>
   );

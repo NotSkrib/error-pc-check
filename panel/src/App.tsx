@@ -11,7 +11,8 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="min-h-full">
       <header className="flex items-center justify-between border-b border-white/10 px-5 py-3">
         <Link to="/" className="font-semibold tracking-tight">
-          SSAC <span className="opacity-50">· screenshare anti-cheat</span>
+          <span className="mr-2 inline-block h-4 w-4 -mb-0.5 rounded bg-[#e5484d]" />
+          Error SMP <span className="opacity-50">· Screenshare</span>
         </Link>
         <div className="flex items-center gap-4 text-sm">
           <span className="opacity-60">{session?.user.email}</span>

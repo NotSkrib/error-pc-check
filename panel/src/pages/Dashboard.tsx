@@ -9,9 +9,6 @@ interface ReportRow {
   verdict_severity: Severity;
 }
 
-function slugify(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
-}
 
 /** Client download — the download function validates the key and streams the
  *  self-contained build, saved as ssac-screenshare-<key>.exe. */
@@ -26,7 +23,6 @@ export default function Dashboard() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [reports, setReports] = useState<Record<string, ReportRow>>({});
   const [loading, setLoading] = useState(true);
-  const [newTenant, setNewTenant] = useState("");
   const [caseLabel, setCaseLabel] = useState("");
   const [suspect, setSuspect] = useState("");
   const [issued, setIssued] = useState<{ key: string; expires_at: string } | null>(null);
@@ -34,12 +30,22 @@ export default function Dashboard() {
 
   const tenant = useMemo(() => tenants.find((t) => t.id === tenantId) ?? null, [tenants, tenantId]);
 
-  async function loadTenants() {
+  async function loadTenants(triedGuestJoin = false) {
     const { data, error } = await supabase
       .from("tenants")
       .select("id,name,slug,retention_days,plan,created_at")
       .order("created_at");
     if (error) setErr(error.message);
+
+    // A guest whose anonymous session resumed without a membership: self-heal.
+    if ((data?.length ?? 0) === 0 && !triedGuestJoin) {
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user?.is_anonymous) {
+        await supabase.rpc("join_as_guest");
+        return loadTenants(true);
+      }
+    }
+
     setTenants(data ?? []);
     setTenantId((prev) => prev ?? data?.[0]?.id ?? null);
     setLoading(false);
@@ -72,20 +78,6 @@ export default function Dashboard() {
     if (tenantId) loadSessions(tenantId);
   }, [tenantId]);
 
-  async function createTenant(e: React.FormEvent) {
-    e.preventDefault();
-    setErr(null);
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("tenants").insert({
-      name: newTenant.trim(),
-      slug: slugify(newTenant),
-      created_by: u.user!.id,
-    });
-    if (error) return setErr(error.message);
-    setNewTenant("");
-    loadTenants();
-  }
-
   async function generateKey(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -109,41 +101,38 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {tenants.length === 0 ? (
-        <form onSubmit={createTenant} className="max-w-md space-y-3">
-          <h2 className="font-semibold">Create your first server</h2>
+        <div className="max-w-md space-y-2">
+          <h2 className="font-semibold">No access yet</h2>
           <p className="text-sm opacity-60">
-            The name is shown to suspects on the consent screen (e.g. your Minecraft server brand).
+            This account isn't attached to a server. Ask an Error SMP admin to add you, or go back and
+            use <span className="opacity-90">Continue as guest</span>.
           </p>
-          <input
-            className="w-full rounded border border-white/15 bg-transparent px-3 py-2 text-sm"
-            placeholder="Server name"
-            value={newTenant}
-            onChange={(e) => setNewTenant(e.target.value)}
-            required
-          />
-          <button className="rounded bg-white/90 px-3 py-2 text-sm font-medium text-black">
-            Create
-          </button>
           {err && <p className="text-sm text-sev-high">{err}</p>}
-        </form>
+        </div>
       ) : (
         <>
           <div className="flex items-center gap-3">
-            <label className="text-sm opacity-60">Server</label>
-            <select
-              className="rounded border border-white/15 bg-transparent px-2 py-1 text-sm"
-              value={tenantId ?? ""}
-              onChange={(e) => setTenantId(e.target.value)}
-            >
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id} className="bg-black">
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            {tenants.length > 1 ? (
+              <>
+                <label className="text-sm opacity-60">Server</label>
+                <select
+                  className="rounded border border-white/15 bg-transparent px-2 py-1 text-sm"
+                  value={tenantId ?? ""}
+                  onChange={(e) => setTenantId(e.target.value)}
+                >
+                  {tenants.map((t) => (
+                    <option key={t.id} value={t.id} className="bg-black">
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <span className="text-sm font-medium">{tenant?.name}</span>
+            )}
             {tenant && (
               <span className="text-xs opacity-40">
-                retention {tenant.retention_days}d · plan {tenant.plan}
+                keys expire 30 min · reports kept {tenant.retention_days}d
               </span>
             )}
           </div>
