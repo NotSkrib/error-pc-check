@@ -19,14 +19,27 @@ port = 54323
 
 [auth]
 enabled = true
-site_url = "http://localhost:5173"
-additional_redirect_urls = ["http://localhost:5173"]
+site_url = "https://ssac-panel.vercel.app"
+additional_redirect_urls = [
+  "https://ssac-panel.vercel.app",
+  "https://ssac-panel.vercel.app/**",
+  "http://localhost:5173",
+  "http://localhost:5173/**"
+]
 jwt_expiry = 3600
 enable_signup = true
 
 [auth.email]
 enable_signup = true
-enable_confirmations = false
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+# 2FA for staff accounts (docs/phase-0-design.md §2.2 A6). config push resets
+# anything not listed to CLI defaults, so keep these explicit.
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
 
 [realtime]
 enabled = true
