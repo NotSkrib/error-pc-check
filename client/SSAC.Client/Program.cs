@@ -47,15 +47,16 @@ public sealed record Options(string Key, string Endpoint, string? Pin, bool Auto
             }
         }
         key ??= KeyFromOwnFilename();
+        key ??= KeyFromMarkOfTheWeb();
         key ??= PromptForKey();
         if (string.IsNullOrWhiteSpace(key)) return null;
         return new Options(key.Trim(), (endpoint ?? AppInfo.DefaultEndpoint).TrimEnd('/'), pin, autoConsent);
     }
 
     /// <summary>
-    /// The panel's download link names the file `errorsmp-&lt;KEY&gt;.exe`, so a
-    /// suspect can just double-click it. Pull the key back out of our own name.
-    /// The older `ssac-screenshare-&lt;KEY&gt;.exe` name is still accepted.
+    /// The shipped file is just `Error_PC_Check.exe`, but if someone kept (or a
+    /// tester used) a keyed name like `errorsmp-&lt;KEY&gt;.exe` /
+    /// `ssac-screenshare-&lt;KEY&gt;.exe`, pull the key out of it.
     /// </summary>
     private static string? KeyFromOwnFilename()
     {
@@ -64,6 +65,34 @@ public sealed record Options(string Key, string Endpoint, string? Pin, bool Auto
             var stem = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? "");
             var m = System.Text.RegularExpressions.Regex.Match(
                 stem, @"^(?:errorsmp|ssac[-_]screenshare)[-_](?<k>[A-Za-z0-9_\-]{12,64})$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return m.Success ? m.Groups["k"].Value : null;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// Windows tags every browser download with a `Zone.Identifier` alternate
+    /// data stream that records the URL it came from (`HostUrl` / `ReferrerUrl`).
+    /// The panel link is `.../d/&lt;KEY&gt;` (or `?key=&lt;KEY&gt;`), so we can
+    /// recover the key from that even though the file itself is just
+    /// `Error_PC_Check.exe`. Works for the normal download-and-run flow; if the
+    /// tag is missing (non-NTFS, "Unblock"ed, copied) we fall back to the prompt.
+    /// </summary>
+    private static string? KeyFromMarkOfTheWeb()
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exe)) return null;
+
+            string text;
+            using (var fs = new FileStream(exe + ":Zone.Identifier", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var sr = new StreamReader(fs))
+                text = sr.ReadToEnd();
+
+            var m = System.Text.RegularExpressions.Regex.Match(
+                text, @"(?:/d/|[?&]key=)(?<k>[A-Za-z0-9_\-]{12,64})",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             return m.Success ? m.Groups["k"].Value : null;
         }

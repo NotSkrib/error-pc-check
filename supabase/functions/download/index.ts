@@ -4,8 +4,9 @@
 //
 // Validates the one-time key, then streams the self-contained client binary
 // (stored in <=50 MB parts to fit the free-tier Storage limit) reassembled,
-// with Content-Disposition naming it errorsmp-<key>.exe so the client can
-// recover the key from its own filename. No key -> friendly HTML page.
+// named plainly Error_PC_Check.exe. The key is not in the file name; the client
+// recovers it from the download's Zone.Identifier (mark-of-the-web) URL, or
+// prompts. No key -> friendly HTML page.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
     headers: {
       "content-type": "application/octet-stream",
       "content-length": String(manifest.bytes),
-      "content-disposition": `attachment; filename="errorsmp-${key}.exe"`,
+      "content-disposition": `attachment; filename="Error_PC_Check.exe"`,
       "x-content-type-options": "nosniff",
       "cache-control": "no-store",
       "x-ssac-server": server,

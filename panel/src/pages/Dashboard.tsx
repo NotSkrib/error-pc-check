@@ -217,8 +217,8 @@ export default function Dashboard() {
           {issued && (
             <div className="mt-5 rounded-xl border border-brand/25 bg-brand/[0.06] p-4 shadow-glow">
               <p className="text-sm text-fg-mut">
-                Send this link to the person. The key is baked into the filename — they just
-                download and run it. Works once · expires{" "}
+                Send this link to the person. It downloads <span className="text-fg">Error_PC_Check.exe</span>{" "}
+                — they just run it, the key rides along with the download. Works once · expires{" "}
                 <span className="text-fg">{new Date(issued.expires_at).toLocaleTimeString()}</span>.
               </p>
 
