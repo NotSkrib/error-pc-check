@@ -52,10 +52,16 @@ Upload:
 The `download` Edge Function validates the key, reads `parts/manifest.json`, and
 streams the parts reassembled as a plain `Error_PC_Check.exe` (no key in the name).
 
-The panel only ever hands out `https://ssac-panel.vercel.app/d/<KEY>`, which
-`panel/vercel.json` proxies to `$SUPA_URL/functions/v1/download?key=<KEY>` — the
-Supabase host never appears in the UI. (Localhost dev has no proxy, so it uses
-the function URL directly there.)
+The link staff hand out lives on a **separate** Vercel project, `error-pc-check/`
+(→ `https://error-pc-check.vercel.app`), whose `/` is a neutral static page —
+the recipient never sees the staff panel. Its `vercel.json` has one rewrite:
+`/d/:key` → `$SUPA_URL/functions/v1/download?key=:key`.
+
+Deploy it on its own: `cd error-pc-check && vercel deploy --prod`. Override the
+host the panel points at with `VITE_DOWNLOAD_BASE` (defaults to
+`https://error-pc-check.vercel.app`). Localhost dev uses the function URL
+directly. `panel/vercel.json` keeps an identical `/d/:key` rewrite so old
+`ssac-panel.vercel.app/d/<KEY>` links still work.
 
 The client recovers the key from the download's `Zone.Identifier` mark-of-the-web
 stream (`HostUrl` = `.../d/<KEY>`), via `Options.KeyFromMarkOfTheWeb`. Order of

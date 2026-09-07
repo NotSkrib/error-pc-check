@@ -10,17 +10,21 @@ interface ReportRow {
 }
 
 
-/** The link staff hand out. Always on the panel's own domain — `/d/:key` is
- *  proxied to the download Edge Function by panel/vercel.json, so the Supabase
- *  host never appears. On localhost dev (no proxy) it falls back to the function
- *  URL directly. */
+/** The link staff hand out. It lives on a separate, bare host (the `error-pc-check`
+ *  Vercel project) whose `/` is a neutral page — the recipient never sees the
+ *  staff panel. `/d/:key` there proxies to the download Edge Function.
+ *  Override with VITE_DOWNLOAD_BASE; on localhost dev, fall back to the
+ *  function URL directly. */
+const DOWNLOAD_BASE =
+  (import.meta.env.VITE_DOWNLOAD_BASE as string | undefined) ?? "https://error-pc-check.vercel.app";
+
 function downloadUrl(key: string) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  if (!origin || origin.includes("localhost") || origin.includes("127.0.0.1")) {
+  if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
     const base = import.meta.env.VITE_SUPABASE_URL as string;
     return `${base}/functions/v1/download?key=${encodeURIComponent(key)}`;
   }
-  return `${origin}/d/${encodeURIComponent(key)}`;
+  return `${DOWNLOAD_BASE}/d/${encodeURIComponent(key)}`;
 }
 
 export default function Dashboard() {
