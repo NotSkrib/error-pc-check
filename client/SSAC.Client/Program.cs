@@ -258,6 +258,7 @@ internal static class SelfTest
         IScanModule[] modules =
         [
             new EnvironmentModule(), new ProcessListModule(), new GeneralCheatModule(),
+            new ExternalMacroModule(),
             new BrowserDownloadsModule(), new PrefetchModule(), new PcaModule(), new BamModule(),
             new UserAssistModule(), new ShimCacheModule(), new RegistryArtifactsModule(),
             new RecycleBinModule(), new PowerShellHistoryModule(), new MinecraftModule(sigDb),
@@ -319,7 +320,7 @@ internal static class Headless
 
         IScanModule[] modules =
         [
-            new EnvironmentModule(), new ProcessListModule(), new GeneralCheatModule(),
+            new EnvironmentModule(), new ProcessListModule(), new GeneralCheatModule(), new ExternalMacroModule(),
             new PrefetchModule(), new PcaModule(), new BamModule(), new UserAssistModule(), new ShimCacheModule(),
             new RegistryArtifactsModule(), new RecycleBinModule(), new PowerShellHistoryModule(),
             new MinecraftModule(sigDb), new JvmInjectionModule(), new JavaCrashLogModule(),
@@ -450,6 +451,7 @@ internal sealed class FlowContext : ApplicationContext
             new EnvironmentModule(),
             new ProcessListModule(),
             new GeneralCheatModule(),
+            new ExternalMacroModule(),
             new BrowserDownloadsModule(),
             new PrefetchModule(),
             new BamModule(),

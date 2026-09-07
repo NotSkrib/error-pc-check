@@ -48,6 +48,7 @@ export const MODULE_LABEL: Record<string, string> = {
   "powershell-history": "PowerShell history",
   "browser-downloads": "Browser downloads",
   "general-cheats": "General cheat tooling",
+  "external-macro": "External macro / cheat program",
   minecraft: "Minecraft install",
   "jvm-injection": "Live JVM injection",
   "java-crash-log": "Java crash logs",
