@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DETECTION TEST DECOY — NOT A CHEAT.
+
+    This program does nothing: no input automation, no SendInput, no screen
+    capture, no process/memory access, no game interaction. It only carries the
+    same *fingerprints* a real external macro (e.g. Zenith Macros) leaves on a
+    PC so the screenshare client's `external-macro` module can be tested:
+      - a window titled "Zenith Macros"
+      - PE version info: ProductName / Company / Description
+      - unsigned, run from a user folder, optionally under a renamed filename
+    Build/run instructions and results: test/README-decoy.md
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ZenithDecoy</AssemblyName>
+
+    <Version>1.4.8</Version>
+    <FileVersion>1.4.8.0</FileVersion>
+    <Company>Zenith</Company>
+    <Product>Zenith Macros</Product>
+    <AssemblyTitle>Zenith Macros — External PvP Client</AssemblyTitle>
+    <Description>Zenith Macros — external PvP macro client (DETECTION TEST DECOY, does nothing)</Description>
+    <Copyright>test decoy</Copyright>
+  </PropertyGroup>
+
+</Project>
