@@ -10,19 +10,15 @@ interface ReportRow {
 }
 
 
-/** Direct Edge Function URL — validates the key and streams the self-contained
- *  build, saved as errorsmp-<key>.exe. Used as the dev / fallback link. */
-function directDownloadUrl(key: string) {
-  const base = import.meta.env.VITE_SUPABASE_URL as string;
-  return `${base}/functions/v1/download?key=${encodeURIComponent(key)}`;
-}
-
-/** Short, on-brand link to hand out. `/d/:key` is proxied to the Edge Function
- *  by panel/vercel.json. Falls back to the direct URL on localhost (no proxy). */
+/** The link staff hand out. Always on the panel's own domain — `/d/:key` is
+ *  proxied to the download Edge Function by panel/vercel.json, so the Supabase
+ *  host never appears. On localhost dev (no proxy) it falls back to the function
+ *  URL directly. */
 function downloadUrl(key: string) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   if (!origin || origin.includes("localhost") || origin.includes("127.0.0.1")) {
-    return directDownloadUrl(key);
+    const base = import.meta.env.VITE_SUPABASE_URL as string;
+    return `${base}/functions/v1/download?key=${encodeURIComponent(key)}`;
   }
   return `${origin}/d/${encodeURIComponent(key)}`;
 }
@@ -155,7 +151,6 @@ export default function Dashboard() {
     );
 
   const dl = issued ? downloadUrl(issued.key) : "";
-  const directDl = issued ? directDownloadUrl(issued.key) : "";
 
   return (
     <div className="space-y-6">
@@ -242,14 +237,6 @@ export default function Dashboard() {
                     Test
                   </a>
                 </div>
-                {directDl !== dl && (
-                  <p className="mt-1.5 text-[11px] text-fg-dim">
-                    Not downloading?{" "}
-                    <a href={directDl} className="underline hover:text-fg-mut">
-                      direct link
-                    </a>
-                  </p>
-                )}
               </div>
 
               <div className="mt-3 rounded-lg border border-ink-line bg-ink-0/60 p-3 text-xs text-fg-mut">

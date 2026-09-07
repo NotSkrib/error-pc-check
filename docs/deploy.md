@@ -52,9 +52,10 @@ Upload:
 The `download` Edge Function validates the key, reads `parts/manifest.json`, and
 streams the parts reassembled as a plain `Error_PC_Check.exe` (no key in the name).
 
-The panel hands out the short form `https://ssac-panel.vercel.app/d/<KEY>`, which
-`panel/vercel.json` proxies to `$SUPA_URL/functions/v1/download?key=<KEY>` (still
-shown as a "direct link" fallback, and used as-is on localhost).
+The panel only ever hands out `https://ssac-panel.vercel.app/d/<KEY>`, which
+`panel/vercel.json` proxies to `$SUPA_URL/functions/v1/download?key=<KEY>` — the
+Supabase host never appears in the UI. (Localhost dev has no proxy, so it uses
+the function URL directly there.)
 
 The client recovers the key from the download's `Zone.Identifier` mark-of-the-web
 stream (`HostUrl` = `.../d/<KEY>`), via `Options.KeyFromMarkOfTheWeb`. Order of
