@@ -34,10 +34,13 @@ Upload:
   parts because it exceeds the free-tier 50 MB Storage limit:
 
   ```bash
-  dotnet publish client/SSAC.Client/SSAC.Client.csproj -c Release -p:PublishReadyToRun=false -p:DebugType=none
+  ./scripts/build-client.sh
+  # = dotnet build  ->  obfuscar (rename-only, client/SSAC.Client/obfuscar.xml)
+  #   ->  dotnet publish --no-build   (bundles the obfuscated assembly)
   # ~145 MB. Do NOT add -p:EnableCompressionInSingleFile — a compressed
   # single-file bundle reads as "packed" to AV heuristics and picks up
-  # false positives on VirusTotal.
+  # false positives on VirusTotal. Obfuscar is rename-only (no string
+  # encryption, no packing) for the same reason.
   F=client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe
   split -b 30m -d "$F" part                      # part00..partNN
   # upload each part -> ssac-assets/client/parts/partNN  (x-upsert: true)

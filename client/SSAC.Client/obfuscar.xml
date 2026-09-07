@@ -1,0 +1,44 @@
+<?xml version='1.0'?>
+<!--
+  Obfuscar config for the Error SMP Screenshare client.
+
+  Rename only. TYPES and METHODS are renamed to defeat casual decompilation
+  (ILSpy / dnSpy) of the detection logic. FIELDS, PROPERTIES and EVENTS are
+  intentionally kept so that System.Text.Json serialisation of the anonymous
+  wire / evidence objects keeps its keys (the ingest protocol depends on them)
+  and the JsonPropertyName records are unaffected.
+
+  Strings are NOT encrypted: a string decryption stub raises antivirus
+  heuristic scores and we ship unsigned. Revisit once the build is code signed.
+
+  Pipeline is documented in docs/deploy.md (build, then obfuscar, then publish
+  with NoBuild so the obfuscated assembly is what gets bundled).
+-->
+<Obfuscator>
+  <Var name="InPath" value="bin\Release\net8.0-windows\win-x64" />
+  <Var name="OutPath" value="bin\Release\net8.0-windows\win-x64\obfuscated" />
+
+  <Var name="KeepPublicApi" value="false" />
+  <Var name="HidePrivateApi" value="true" />
+  <Var name="HideStrings" value="false" />
+  <Var name="RenameProperties" value="false" />
+  <Var name="RenameFields" value="false" />
+  <Var name="RenameEvents" value="false" />
+  <Var name="ReuseNames" value="true" />
+  <Var name="UseUnicodeNames" value="false" />
+  <Var name="OptimizeMethods" value="true" />
+  <Var name="SuppressIldasm" value="false" />
+
+  <Module file="$(InPath)\ssac-screenshare.dll">
+    <!-- C# anonymous types (new { ... }) are generic types with a parameterised
+         constructor; System.Text.Json reads the ctor parameter names when it
+         serialises them. Renaming nulls those names and STJ throws. All the
+         ingest wire payloads and every module's `evidence` object are anonymous
+         types, so they must be left alone. -->
+    <SkipType name="*AnonymousType*" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
+    <!-- Records that are serialised to JSON: keep them intact for the same reason. -->
+    <SkipType name="SSAC.Client.ConsentPayload" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
+    <SkipType name="SSAC.Client.EnvironmentPayload" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
+    <SkipType name="SSAC.Client.FindingPayload" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
+  </Module>
+</Obfuscator>
