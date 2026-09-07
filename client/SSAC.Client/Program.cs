@@ -130,8 +130,16 @@ internal static class Program
 
         // Make silent crashes visible instead of the process just vanishing.
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
-        Application.ThreadException += (_, e) => ShowFatal(e.Exception);
-        AppDomain.CurrentDomain.UnhandledException += (_, e) => ShowFatal(e.ExceptionObject as Exception);
+        Application.ThreadException += (_, e) =>
+        {
+            Telemetry.Report("thread-exception", e.Exception);
+            ShowFatal(e.Exception);
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            Telemetry.Report("domain-unhandled", e.ExceptionObject as Exception);
+            ShowFatal(e.ExceptionObject as Exception);
+        };
 
         if (args.Contains("--selftest"))
         {
@@ -140,6 +148,7 @@ internal static class Program
         }
 
         var opts = Options.Parse(args);
+        Telemetry.Configure(opts?.Endpoint ?? AppInfo.DefaultEndpoint, opts?.Key);
 
         // --auto: headless run (no windows). Consent is auto-accepted and recorded
         // as headless=true. For E2E / CI only; the shipped tool always shows the
@@ -375,8 +384,9 @@ internal sealed class FlowContext : ApplicationContext
         }
         catch (Exception ex)
         {
+            Telemetry.Report("describe", ex);
             MessageBox.Show($"Could not reach the panel or the key is invalid.\n\n{ex.Message}",
-                "SSAC", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
             ExitThread();
             return;
         }
@@ -414,9 +424,9 @@ internal sealed class FlowContext : ApplicationContext
         }
         catch (Exception ex)
         {
+            Telemetry.Report("start", ex);
             ui.Report("Could not reach the server.", 0);
             ui.Finish(Severity.Info, 0, uploaded: false);
-            _ = ex;
             return;
         }
 

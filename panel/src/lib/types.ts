@@ -133,3 +133,16 @@ export interface ReportEvent {
   pct: number | null;
   created_at: string;
 }
+
+export interface ClientError {
+  id: string;
+  tenant_id: string | null;
+  key_prefix: string | null;
+  phase: string;
+  client_version: string | null;
+  os_build: string | null;
+  exception_type: string | null;
+  message: string | null;
+  stack: string | null;
+  created_at: string;
+}

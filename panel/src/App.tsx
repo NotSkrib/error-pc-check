@@ -3,6 +3,7 @@ import { useAuth, RequireAuth } from "./auth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ReportView from "./pages/ReportView";
+import ClientErrors from "./pages/ClientErrors";
 
 function Shell({ children }: { children: React.ReactNode }) {
   const { session, signOut } = useAuth();
@@ -24,6 +25,11 @@ function Shell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
           <div className="flex items-center gap-3 text-sm">
+            {!isGuest && (
+              <Link to="/errors" className="text-fg-dim hover:text-fg-mut">
+                Crashes
+              </Link>
+            )}
             <span className="flex items-center gap-1.5 text-fg-mut">
               {isGuest && (
                 <span className="chip border-ink-line2 text-fg-mut">guest</span>
@@ -67,6 +73,16 @@ export default function App() {
           <RequireAuth>
             <Shell>
               <ReportView />
+            </Shell>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/errors"
+        element={
+          <RequireAuth>
+            <Shell>
+              <ClientErrors />
             </Shell>
           </RequireAuth>
         }
