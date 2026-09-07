@@ -13,6 +13,8 @@ public static class Forensics
         "vape", "doomsday", "prestige", "entropy", "novoline", "liquidbounce",
         "wurstclient", "meteorclient", "nightware", "nursultan", "slinky",
         "horion", "fate client", "fateinjector", "zephyr",
+        "zenith client", "zenithclient", "zenith macro", "zenith macros",
+        "zenithmacro", "zenithware", "zenith ghost",
         // generic cheat / injection tooling
         "injector", "inject-helper", "dll-inject", "dllinject", "xenos", "guidedhacking",
         "extremeinjector", "processhacker", "reclass", "cheatengine", "cheat engine",
