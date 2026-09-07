@@ -173,7 +173,7 @@ export default function Dashboard() {
         )}
         {tenant && (
           <div className="flex gap-1.5 text-[11px] text-fg-dim">
-            <span className="chip border-ink-line">keys expire 30 min</span>
+            <span className="chip border-ink-line">links expire in 2h</span>
             <span className="chip border-ink-line">reports kept {tenant.retention_days}d</span>
           </div>
         )}

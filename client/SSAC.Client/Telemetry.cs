@@ -35,7 +35,7 @@ internal static class Telemetry
                 client_version = AppInfo.Version,
                 os_build = Environment.OSVersion.VersionString,
                 exception_type = ex?.GetType().FullName,
-                message = ex?.Message,
+                message = ex is IngestException { Detail: { } d } ? $"{ex.Message} — {d}" : ex?.Message,
                 stack = ex?.ToString(),
             };
             var body = System.Text.Json.JsonSerializer.Serialize(payload);

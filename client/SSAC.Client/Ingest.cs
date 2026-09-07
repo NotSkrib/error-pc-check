@@ -46,7 +46,7 @@ public sealed class IngestClient : IDisposable
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    private async Task<JsonDocument> PostAsync(object payload, CancellationToken ct)
+    private async Task<JsonDocument> PostAsync(string action, object payload, CancellationToken ct)
     {
         var body = JsonSerializer.Serialize(payload, JsonOpts);
         using var msg = new HttpRequestMessage(HttpMethod.Post, $"{_endpoint}/ingest")
@@ -58,16 +58,61 @@ public sealed class IngestClient : IDisposable
             .ToLowerInvariant();
         msg.Headers.Add("x-ssac-sig", sig);
 
-        using var resp = await _http.SendAsync(msg, ct);
-        var text = await resp.Content.ReadAsStringAsync(ct);
-        if (!resp.IsSuccessStatusCode)
-            throw new IngestException($"ingest {payload.GetType().Name} failed ({(int)resp.StatusCode}): {text}");
-        return JsonDocument.Parse(text);
+        HttpResponseMessage resp;
+        string text;
+        try
+        {
+            resp = await _http.SendAsync(msg, ct);
+            text = await resp.Content.ReadAsStringAsync(ct);
+        }
+        catch (Exception ex) when (ex is not IngestException)
+        {
+            throw new IngestException(
+                "Couldn't reach the panel. Check your internet connection and try again.",
+                $"{action}: {ex.GetType().Name}: {ex.Message}");
+        }
+
+        using (resp)
+        {
+            if (!resp.IsSuccessStatusCode)
+                throw new IngestException(
+                    Friendly((int)resp.StatusCode, text),
+                    $"{action} {(int)resp.StatusCode}: {text}");
+            return JsonDocument.Parse(text);
+        }
+    }
+
+    /// <summary>Turns the ingest error body into something a player can act on.</summary>
+    private static string Friendly(int status, string body)
+    {
+        var err = "";
+        try
+        {
+            using var d = JsonDocument.Parse(body);
+            if (d.RootElement.TryGetProperty("error", out var e)) err = e.GetString() ?? "";
+        }
+        catch { /* not JSON */ }
+
+        return err switch
+        {
+            "key expired" or "key revoked" =>
+                "This screenshare link has expired. Ask the staff member for a new one.",
+            "key already used" =>
+                "This screenshare link has already been used. Ask the staff member for a new one.",
+            "unknown key" or "missing key" or "bad signature" =>
+                "This screenshare link isn't valid. Ask the staff member for a new one.",
+            _ when status == 409 =>
+                "This screenshare has already been run. Ask the staff member for a new link.",
+            _ when status >= 500 =>
+                "The panel had a problem. Wait a minute and try again.",
+            _ =>
+                "Couldn't start the screenshare. Ask the staff member for a new link.",
+        };
     }
 
     public async Task<SessionDescription> DescribeAsync(CancellationToken ct)
     {
-        using var doc = await PostAsync(new { action = "describe" }, ct);
+        using var doc = await PostAsync("describe", new { action = "describe" }, ct);
         var r = doc.RootElement;
         return new SessionDescription(
             r.GetProperty("server_name").GetString() ?? "Unknown server",
@@ -79,7 +124,7 @@ public sealed class IngestClient : IDisposable
 
     public async Task<string> StartAsync(ConsentPayload consent, EnvironmentPayload env, CancellationToken ct)
     {
-        using var doc = await PostAsync(new
+        using var doc = await PostAsync("start", new
         {
             action = "start",
             consent,
@@ -91,10 +136,10 @@ public sealed class IngestClient : IDisposable
     }
 
     public Task EventAsync(string kind, string? module, string message, int? pct, CancellationToken ct)
-        => Swallow(PostAsync(new { action = "event", kind, module, message, pct }, ct));
+        => Swallow(PostAsync("event", new { action = "event", kind, module, message, pct }, ct));
 
     public Task FindingAsync(FindingPayload f, CancellationToken ct)
-        => PostAsync(new
+        => PostAsync("finding", new
         {
             action = "finding",
             module = f.Module,
@@ -107,7 +152,7 @@ public sealed class IngestClient : IDisposable
         }, ct).ContinueWith(t => t.Result.Dispose(), ct);
 
     public Task CompleteAsync(string verdict, Dictionary<string, int> counts, bool aborted, CancellationToken ct)
-        => Swallow(PostAsync(new
+        => Swallow(PostAsync("complete", new
         {
             action = "complete",
             verdict_severity = verdict,
@@ -123,7 +168,11 @@ public sealed class IngestClient : IDisposable
     public void Dispose() => _http.Dispose();
 }
 
-public sealed class IngestException(string message) : Exception(message);
+public sealed class IngestException(string message, string? detail = null) : Exception(message)
+{
+    /// <summary>Technical detail for the crash log, kept out of the user dialog.</summary>
+    public string? Detail { get; } = detail;
+}
 
 public readonly record struct SessionDescription(
     string ServerName, string CaseLabel, string? SuspectLabel, DateTimeOffset ExpiresAt, bool AlreadyUsed);

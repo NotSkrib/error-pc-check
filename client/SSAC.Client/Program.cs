@@ -230,7 +230,7 @@ internal static class Program
         {
             MessageBox.Show(
                 $"The screenshare tool hit an unexpected error and has to close.\n\n{ex?.GetType().Name}: {ex?.Message}",
-                "SSAC Screenshare Tool", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         catch { /* nothing more we can do */ }
     }
@@ -401,7 +401,9 @@ internal sealed class FlowContext : ApplicationContext
         catch (Exception ex)
         {
             Telemetry.Report("describe", ex);
-            MessageBox.Show($"Could not reach the panel or the key is invalid.\n\n{ex.Message}",
+            MessageBox.Show(
+                ex is IngestException ? ex.Message
+                    : $"Couldn't reach the panel. Check your internet connection and try again.\n\n{ex.Message}",
                 "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
             ExitThread();
             return;
@@ -409,8 +411,8 @@ internal sealed class FlowContext : ApplicationContext
 
         if (desc.AlreadyUsed)
         {
-            MessageBox.Show("This key has already been used. Ask your staff member for a new one.",
-                "SSAC", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("This screenshare link has already been used. Ask the staff member for a new one.",
+                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             ExitThread();
             return;
         }
@@ -441,7 +443,10 @@ internal sealed class FlowContext : ApplicationContext
         catch (Exception ex)
         {
             Telemetry.Report("start", ex);
-            ui.Report("Could not reach the server.", 0);
+            MessageBox.Show(
+                ex is IngestException ? ex.Message
+                    : "Couldn't reach the panel. Check your internet connection and try again.",
+                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
             ui.Finish(Severity.Info, 0, uploaded: false);
             return;
         }
