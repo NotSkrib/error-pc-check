@@ -205,6 +205,16 @@ public sealed class ProcessListModule : IScanModule
                     "A process whose name matches known autoclicker / macro software is running.",
                     new { name, path, pid = p.Id }, SortKey: 5));
 
+            // Any running process whose name / path matches known cheat tooling
+            // (e.g. an external macro like Zenith Macros running alongside the game).
+            if (Forensics.LooksLikeCheat(lname) || (path.Length > 0 && Forensics.LooksLikeCheat(path)))
+            {
+                ctx.NoteExecution(name, path, "live-process", DateTimeOffset.Now);
+                ctx.Add(new Finding(Name, Severity.High, $"Cheat-named program running: {name}",
+                    "A process whose name matches known cheat / macro tooling is running right now.",
+                    new { name, path, pid = p.Id }, SortKey: 1));
+            }
+
             if (!string.IsNullOrEmpty(path) && !Authenticode.IsSigned(path))
             {
                 unsigned++;

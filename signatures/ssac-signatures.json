@@ -1,5 +1,5 @@
 {
-  "version": "2026.09.07",
+  "version": "2026.09.07.1",
   "updated": "2026-09-07",
   "note": "SSAC known-cheat signature seed DB (docs/phase-0-design.md §7). Matchers use publicly known names, package identifiers and log banners only. file_hash matchers are community-contributed and intentionally empty in the seed. A signature matches when the summed weight of its matched matchers >= min_confidence. The client uses whichever of (embedded copy, fetched copy) has the newer version and records the version used in every report.",
   "matcher_kinds": {
@@ -183,18 +183,20 @@
       "references": []
     },
     {
-      "id": "zenith-macro", "name": "Zenith (macro / ghost client)", "family": "zenith", "type": "mod",
+      "id": "zenith-macro", "name": "Zenith Macros (external PvP macro client)", "family": "zenith", "type": "mod",
       "severity_hint": "high", "min_confidence": 2,
       "matchers": [
-        { "kind": "file_name_regex", "value": "(?i)^zenith[-_ v0-9.]*\\.jar$", "weight": 2 },
-        { "kind": "file_name_regex", "value": "(?i)zenith[-_ ]?(client|macro|macros|ghost|ware|autominer|fishbot|autofish)", "weight": 3 },
+        { "kind": "file_name_regex", "value": "(?i)^zenith[-_ v0-9.]*\\.(jar|exe)$", "weight": 2 },
+        { "kind": "file_name_regex", "value": "(?i)zenith[-_ ]?macros?", "weight": 3 },
+        { "kind": "file_name_regex", "value": "(?i)zenith[-_ ]?(client|ghost|ware|autominer|fishbot|autofish)", "weight": 3 },
         { "kind": "string", "value": "com/zenith/macro", "weight": 3 },
         { "kind": "string", "value": "me/zenith/", "weight": 2 },
         { "kind": "string", "value": "zenithmacro", "weight": 2 },
+        { "kind": "string", "value": "zenithmacros.store", "weight": 3 },
         { "kind": "string", "value": "ZenithClient", "weight": 2 },
-        { "kind": "log_regex", "value": "(?i)\\[Zenith\\]|Zenith Macro|ZenithClient|zenith.*(macro|module) (enabled|toggled|loaded)", "weight": 3 }
+        { "kind": "log_regex", "value": "(?i)\\[Zenith\\]|Zenith Macros?|ZenithClient|zenithmacros\\.store|zenith.*(macro|module) (enabled|toggled|loaded)", "weight": 3 }
       ],
-      "references": []
+      "references": ["https://zenithmacros.store"]
     }
   ]
 }

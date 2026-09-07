@@ -14,7 +14,7 @@ public static class Forensics
         "wurstclient", "meteorclient", "nightware", "nursultan", "slinky",
         "horion", "fate client", "fateinjector", "zephyr",
         "zenith client", "zenithclient", "zenith macro", "zenith macros",
-        "zenithmacro", "zenithware", "zenith ghost",
+        "zenithmacro", "zenithmacros", "zenithware", "zenith ghost", "zenith.exe",
         // generic cheat / injection tooling
         "injector", "inject-helper", "dll-inject", "dllinject", "xenos", "guidedhacking",
         "extremeinjector", "processhacker", "reclass", "cheatengine", "cheat engine",
@@ -41,6 +41,7 @@ public static class Forensics
         "impactclient.net", "prestigeclient.vip", "sigmaclient.info", "futureclient.net",
         "novoline.", "nightware.", "aristois.net", "doomsdayclient", "entropy.", "nursultan",
         "unknowncheats.me", "guidedhacking.com", "cheatengine.org", "wemod.com",
+        "zenithmacros.", "zenithmacros.store", "zenith-macros.", "zenithclient.",
     ];
 
     public static bool IsCheatDownload(string urlOrPath)
