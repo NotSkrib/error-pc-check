@@ -144,6 +144,8 @@ public sealed record EnvironmentPayload
     [JsonPropertyName("is_vm")] public bool IsVm { get; init; }
     [JsonPropertyName("debugger_present")] public bool DebuggerPresent { get; init; }
     [JsonPropertyName("client_hash_ok")] public bool ClientHashOk { get; init; }
+    [JsonPropertyName("client_sha256")] public string ClientSha256 { get; init; } = "";
+    [JsonPropertyName("parent_process")] public string ParentProcess { get; init; } = "";
     [JsonPropertyName("elevated")] public bool Elevated { get; init; }
 }
 

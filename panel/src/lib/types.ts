@@ -49,6 +49,9 @@ export const MODULE_LABEL: Record<string, string> = {
   "browser-downloads": "Browser downloads",
   "general-cheats": "General cheat tooling",
   minecraft: "Minecraft install",
+  "jvm-injection": "Live JVM injection",
+  "java-crash-log": "Java crash logs",
+  pca: "Program Compatibility Assistant",
   "usn-journal": "USN journal",
   amcache: "Amcache",
   mft: "$MFT",
@@ -66,7 +69,7 @@ export const moduleLabel = (m: string) => MODULE_LABEL[m] ?? m;
  */
 export function isCoverageGap(f: { severity: Severity; title: string }): boolean {
   if (f.severity !== "info") return false;
-  return /not analysed|not readable|not available|not found|no .* history|module_unavailable/i.test(
+  return /not analysed|not readable|not available|not found|no .* history|no .* found|module_unavailable|timed out|nothing to look at/i.test(
     f.title,
   );
 }

@@ -31,7 +31,9 @@ public sealed class ScanContext(Func<string, string?, string, int?, Task> progre
     private readonly List<Finding> _findings = [];
     public IReadOnlyList<Finding> Findings => _findings;
 
-    public void Add(Finding f) => _findings.Add(f);
+    // Locked: a module abandoned by the per-module timeout may still be running
+    // on a threadpool thread when the main loop moves on.
+    public void Add(Finding f) { lock (_findings) _findings.Add(f); }
 
     // Shared execution-evidence bag: collectors add entries, CorrelationModule reasons over them.
     private readonly List<ExecEvidence> _exec = [];
@@ -111,8 +113,29 @@ public sealed class EnvironmentModule : IScanModule
         IsVm = LooksLikeVm(),
         DebuggerPresent = Debugger.IsAttached || NativeDebuggerPresent(),
         ClientHashOk = SelfIntegrity.Verify(),
+        ClientSha256 = SelfIntegrity.Sha256() ?? "",
+        ParentProcess = ParentProcessName(),
         Elevated = IsElevated(),
     };
+
+    /// <summary>Name of the process that launched us — "explorer" for a double-click,
+    /// a shell / launcher name otherwise. Recorded so staff can see how it was started.</summary>
+    private static string ParentProcessName()
+    {
+        try
+        {
+            using var s = new System.Management.ManagementObjectSearcher(
+                $"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {Environment.ProcessId}");
+            foreach (var o in s.Get())
+            {
+                var ppid = Convert.ToInt32(o["ParentProcessId"]);
+                try { return Process.GetProcessById(ppid).ProcessName; }
+                catch { return ppid.ToString(); }
+            }
+        }
+        catch { /* WMI unavailable */ }
+        return "";
+    }
 
     public static bool IsElevated()
     {
@@ -212,17 +235,22 @@ public static class Authenticode
 
 public static class SelfIntegrity
 {
-    /// <summary>Phase 2 stub: hash our own image and log it. Phase 7 compares to a signed manifest.</summary>
-    public static bool Verify()
+    /// <summary>
+    /// SHA-256 of our own on-disk image, lowercase hex. Sent with the report so
+    /// staff (or a later automated check) can confirm it came from an unmodified
+    /// build — our client is easy to decompile and patch. null if unreadable.
+    /// </summary>
+    public static string? Sha256()
     {
         try
         {
             var path = Environment.ProcessPath;
-            if (path is null || !File.Exists(path)) return false;
+            if (path is null || !File.Exists(path)) return null;
             using var fs = File.OpenRead(path);
-            _ = Convert.ToHexString(SHA256.HashData(fs));
-            return true;
+            return Convert.ToHexString(SHA256.HashData(fs)).ToLowerInvariant();
         }
-        catch { return false; }
+        catch { return null; }
     }
+
+    public static bool Verify() => Sha256() is not null;
 }

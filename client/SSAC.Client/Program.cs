@@ -178,6 +178,28 @@ internal static class Program
         catch { /* ignore */ }
     }
 
+    /// <summary>
+    /// Run one scan module, but never let it wedge the whole run: if it exceeds
+    /// <paramref name="timeout"/> we stop awaiting it, ask it to cancel, and record
+    /// a coverage gap so the report shows that collector was skipped.
+    /// </summary>
+    internal static async Task RunModuleGuarded(IScanModule m, ScanContext ctx, CancellationToken ct, TimeSpan timeout)
+    {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var run = Task.Run(() => m.RunAsync(ctx, linked.Token), linked.Token);
+        var finished = await Task.WhenAny(run, Task.Delay(timeout, CancellationToken.None));
+        if (finished != run)
+        {
+            linked.Cancel();
+            if (ct.IsCancellationRequested) return;
+            ctx.Add(new Finding(m.Name, Severity.Info, $"{m.Name} did not finish (timed out)",
+                $"The {m.Name} collector ran longer than {(int)timeout.TotalSeconds}s and was skipped so the scan could finish. Some evidence from it may be missing.",
+                new { timeout_seconds = (int)timeout.TotalSeconds }));
+            return;
+        }
+        await run; // surface any exception to the caller's catch
+    }
+
     internal static void ShowFatal(Exception? ex)
     {
         try
@@ -212,9 +234,10 @@ internal static class SelfTest
         IScanModule[] modules =
         [
             new EnvironmentModule(), new ProcessListModule(), new GeneralCheatModule(),
-            new BrowserDownloadsModule(), new PrefetchModule(), new BamModule(),
+            new BrowserDownloadsModule(), new PrefetchModule(), new PcaModule(), new BamModule(),
             new UserAssistModule(), new ShimCacheModule(), new RegistryArtifactsModule(),
             new RecycleBinModule(), new PowerShellHistoryModule(), new MinecraftModule(sigDb),
+            new JvmInjectionModule(), new JavaCrashLogModule(),
             new UsnJournalModule(), new AmcacheModule(), new MftModule(), new EventLogModule(),
             new CorrelationModule(),
         ];
@@ -273,9 +296,10 @@ internal static class Headless
         IScanModule[] modules =
         [
             new EnvironmentModule(), new ProcessListModule(), new GeneralCheatModule(),
-            new PrefetchModule(), new BamModule(), new UserAssistModule(), new ShimCacheModule(),
+            new PrefetchModule(), new PcaModule(), new BamModule(), new UserAssistModule(), new ShimCacheModule(),
             new RegistryArtifactsModule(), new RecycleBinModule(), new PowerShellHistoryModule(),
-            new MinecraftModule(sigDb), new UsnJournalModule(), new AmcacheModule(), new MftModule(),
+            new MinecraftModule(sigDb), new JvmInjectionModule(), new JavaCrashLogModule(),
+            new UsnJournalModule(), new AmcacheModule(), new MftModule(),
             new EventLogModule(), new CorrelationModule(),
         ];
 
@@ -291,7 +315,7 @@ internal static class Headless
         var sent = 0;
         foreach (var m in modules)
         {
-            try { await m.RunAsync(ctx, ct); }
+            try { await Program.RunModuleGuarded(m, ctx, ct, TimeSpan.FromSeconds(90)); }
             catch (Exception ex) { ctx.Add(new Finding(m.Name, Severity.Info, $"module '{m.Name}' failed", ex.Message)); }
             for (; sent < ctx.Findings.Count; sent++)
             {
@@ -410,6 +434,9 @@ internal sealed class FlowContext : ApplicationContext
             new RecycleBinModule(),
             new PowerShellHistoryModule(),
             new MinecraftModule(sigDb),
+            new JvmInjectionModule(),
+            new JavaCrashLogModule(),
+            new PcaModule(),
             new UsnJournalModule(),
             new AmcacheModule(),
             new MftModule(),
@@ -433,7 +460,7 @@ internal sealed class FlowContext : ApplicationContext
             var sent = 0;
             foreach (var m in modules)
             {
-                try { await m.RunAsync(ctx, cts.Token); }
+                try { await Program.RunModuleGuarded(m, ctx, cts.Token, TimeSpan.FromSeconds(90)); }
                 catch (Exception ex)
                 {
                     ctx.Add(new Finding(m.Name, Severity.Info, $"Module '{m.Name}' failed to run", ex.Message));
