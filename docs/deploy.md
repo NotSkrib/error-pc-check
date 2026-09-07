@@ -47,13 +47,16 @@ Upload:
 ### The download link
 
 The `download` Edge Function validates the key, reads `parts/manifest.json`, and
-streams the parts reassembled as `ssac-screenshare-<KEY>.exe`. The panel builds:
-`$SUPA_URL/functions/v1/download?key=<KEY>`
+streams the parts reassembled as `errorsmp-<KEY>.exe`.
 
-Supabase's `?download=` sets `Content-Disposition` so the browser saves the file
-as `ssac-screenshare-<KEY>.exe`; the client reads its own filename to recover the
-key (`Options.KeyFromOwnFilename`) and uses the baked-in `AppInfo.DefaultEndpoint`.
-So the suspect just downloads and double-clicks.
+The panel hands out the short form `https://ssac-panel.vercel.app/d/<KEY>`, which
+`panel/vercel.json` proxies to `$SUPA_URL/functions/v1/download?key=<KEY>` (still
+shown as a "direct link" fallback, and used as-is on localhost).
+
+The `Content-Disposition` header names the file `errorsmp-<KEY>.exe`; the client
+reads its own filename to recover the key (`Options.KeyFromOwnFilename`, which
+also still accepts the legacy `ssac-screenshare-<KEY>.exe` name) and uses the
+baked-in `AppInfo.DefaultEndpoint`. So the suspect just downloads and double-clicks.
 
 ## Panel
 
