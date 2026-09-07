@@ -48,7 +48,9 @@ public sealed record Options(string Key, string Endpoint, string? Pin, bool Auto
         }
         key ??= KeyFromOwnFilename();
         key ??= KeyFromMarkOfTheWeb();
-        key ??= PromptForKey();
+        // No paste-the-key dialog: the file is always run from a keyed download,
+        // so the key comes from the download itself. If it somehow isn't there,
+        // Main shows a "ask for a new link" message rather than a text box.
         if (string.IsNullOrWhiteSpace(key)) return null;
         return new Options(key.Trim(), (endpoint ?? AppInfo.DefaultEndpoint).TrimEnd('/'), pin, autoConsent);
     }
@@ -76,8 +78,7 @@ public sealed record Options(string Key, string Endpoint, string? Pin, bool Auto
     /// data stream that records the URL it came from (`HostUrl` / `ReferrerUrl`).
     /// The panel link is `.../d/&lt;KEY&gt;` (or `?key=&lt;KEY&gt;`), so we can
     /// recover the key from that even though the file itself is just
-    /// `Error_PC_Check.exe`. Works for the normal download-and-run flow; if the
-    /// tag is missing (non-NTFS, "Unblock"ed, copied) we fall back to the prompt.
+    /// `Error_PC_Check.exe`. This is the normal path for a browser download.
     /// </summary>
     private static string? KeyFromMarkOfTheWeb()
     {
@@ -99,26 +100,6 @@ public sealed record Options(string Key, string Endpoint, string? Pin, bool Auto
         catch { return null; }
     }
 
-    private static string? PromptForKey()
-    {
-        using var f = new Form
-        {
-            Text = "SSAC Screenshare Tool",
-            ClientSize = new System.Drawing.Size(420, 130),
-            FormBorderStyle = FormBorderStyle.FixedDialog,
-            StartPosition = FormStartPosition.CenterScreen,
-            MaximizeBox = false,
-            MinimizeBox = false,
-        };
-        var lbl = new Label { Text = "Paste the key your staff member gave you:", Dock = DockStyle.Top, Height = 28, Padding = new Padding(10, 8, 10, 0) };
-        var box = new TextBox { Dock = DockStyle.Top, Margin = new Padding(10) };
-        var ok = new Button { Text = "Continue", Dock = DockStyle.Bottom, Height = 32, DialogResult = DialogResult.OK };
-        f.Controls.Add(box);
-        f.Controls.Add(lbl);
-        f.Controls.Add(ok);
-        f.AcceptButton = ok;
-        return f.ShowDialog() == DialogResult.OK ? box.Text : null;
-    }
 }
 
 internal static class Program
@@ -160,10 +141,12 @@ internal static class Program
         }
         if (opts is null)
         {
-            MessageBox.Show(
-                "SSAC Screenshare Tool\n\nUsage: ssac-screenshare --key <KEY> [--endpoint <URL>] [--pin <SPKI>]\n\n" +
-                "You normally just double-click and paste the key when asked.",
-                "SSAC", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            var msg = args.Contains("--help") || args.Contains("-h") || args.Contains("/?")
+                ? "Error SMP Screenshare\n\nUsage: Error_PC_Check.exe [--key <KEY>] [--endpoint <URL>] [--pin <SPKI>]\n\n" +
+                  "Normally you just double-click the file the staff member sent you."
+                : "Error SMP Screenshare\n\nThis file needs to be run straight from the download link a staff member " +
+                  "sent you. Re-download it from that link and run it again — don't move or rename it first.";
+            MessageBox.Show(msg, "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 

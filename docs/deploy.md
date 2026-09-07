@@ -56,12 +56,13 @@ The panel hands out the short form `https://ssac-panel.vercel.app/d/<KEY>`, whic
 `panel/vercel.json` proxies to `$SUPA_URL/functions/v1/download?key=<KEY>` (still
 shown as a "direct link" fallback, and used as-is on localhost).
 
-The client recovers the key without a prompt from the download's `Zone.Identifier`
-mark-of-the-web stream (`HostUrl` = `.../d/<KEY>`), via `Options.KeyFromMarkOfTheWeb`.
-Order of recovery: `--key` arg → keyed file name (`errorsmp-<KEY>.exe` /
-`ssac-screenshare-<KEY>.exe`, for testing) → mark-of-the-web → paste-key prompt.
-It then uses the baked-in `AppInfo.DefaultEndpoint`. So the suspect just downloads
-and double-clicks; only a non-NTFS / "Unblock"ed / copied file falls back to the prompt.
+The client recovers the key from the download's `Zone.Identifier` mark-of-the-web
+stream (`HostUrl` = `.../d/<KEY>`), via `Options.KeyFromMarkOfTheWeb`. Order of
+recovery: `--key` arg → keyed file name (`errorsmp-<KEY>.exe` /
+`ssac-screenshare-<KEY>.exe`, for testing) → mark-of-the-web. There is no
+paste-the-key dialog: if none of those yield a key the client shows a short
+"re-download from the link" message and exits. It then uses the baked-in
+`AppInfo.DefaultEndpoint`, so the suspect just downloads and double-clicks.
 
 ## Panel
 
