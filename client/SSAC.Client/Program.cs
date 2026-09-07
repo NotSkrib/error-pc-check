@@ -46,6 +46,7 @@ public sealed record Options(string Key, string Endpoint, string? Pin, bool Auto
                     break;
             }
         }
+        key ??= KeyFromSelfOverlay();
         key ??= KeyFromOwnFilename();
         key ??= KeyFromMarkOfTheWeb();
         // No paste-the-key dialog: the file is always run from a keyed download,
@@ -53,6 +54,37 @@ public sealed record Options(string Key, string Endpoint, string? Pin, bool Auto
         // Main shows a "ask for a new link" message rather than a text box.
         if (string.IsNullOrWhiteSpace(key)) return null;
         return new Options(key.Trim(), (endpoint ?? AppInfo.DefaultEndpoint).TrimEnd('/'), pin, autoConsent);
+    }
+
+    /// <summary>
+    /// The download bakes the key into the end of the file
+    /// (…<c>ERRSMPKEY[&lt;KEY&gt;]ERRSMPKEY</c>…). Read our own tail and pull it
+    /// out. This is the reliable path: it survives renaming, moving, copying and
+    /// "Unblock", unlike the mark-of-the-web tag.
+    /// </summary>
+    private static string? KeyFromSelfOverlay()
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exe)) return null;
+            using var fs = new FileStream(exe, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var take = (int)Math.Min(4096, fs.Length);
+            fs.Seek(-take, SeekOrigin.End);
+            var buf = new byte[take];
+            var read = 0;
+            while (read < take)
+            {
+                var n = fs.Read(buf, read, take - read);
+                if (n <= 0) break;
+                read += n;
+            }
+            var tail = System.Text.Encoding.ASCII.GetString(buf, 0, read);
+            var m = System.Text.RegularExpressions.Regex.Match(
+                tail, @"ERRSMPKEY\[(?<k>[A-Za-z0-9_\-]{12,64})\]ERRSMPKEY");
+            return m.Success ? m.Groups["k"].Value : null;
+        }
+        catch { return null; }
     }
 
     /// <summary>

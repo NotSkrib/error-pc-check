@@ -236,9 +236,10 @@ public static class Authenticode
 public static class SelfIntegrity
 {
     /// <summary>
-    /// SHA-256 of our own on-disk image, lowercase hex. Sent with the report so
-    /// staff (or a later automated check) can confirm it came from an unmodified
-    /// build — our client is easy to decompile and patch. null if unreadable.
+    /// SHA-256 of our own on-disk image, lowercase hex, excluding the per-download
+    /// key overlay the download function appends (…\nERRSMPKEY[KEY]ERRSMPKEY\n) so
+    /// the value is the same for every download of a build. Sent with the report
+    /// so staff can confirm it matches the published build. null if unreadable.
     /// </summary>
     public static string? Sha256()
     {
@@ -247,7 +248,39 @@ public static class SelfIntegrity
             var path = Environment.ProcessPath;
             if (path is null || !File.Exists(path)) return null;
             using var fs = File.OpenRead(path);
-            return Convert.ToHexString(SHA256.HashData(fs)).ToLowerInvariant();
+
+            long hashLen = fs.Length;
+            var probe = (int)Math.Min(8192, fs.Length);
+            if (probe > 0)
+            {
+                fs.Seek(-probe, SeekOrigin.End);
+                var tail = new byte[probe];
+                var got = 0;
+                int n;
+                while (got < probe && (n = fs.Read(tail, got, probe - got)) > 0) got += n;
+                var marker = System.Text.Encoding.ASCII.GetBytes("\nERRSMPKEY[");
+                for (var i = got - marker.Length; i >= 0; i--)
+                {
+                    var hit = true;
+                    for (var j = 0; j < marker.Length; j++)
+                        if (tail[i + j] != marker[j]) { hit = false; break; }
+                    if (hit) { hashLen = fs.Length - (got - i); break; }
+                }
+            }
+
+            fs.Seek(0, SeekOrigin.Begin);
+            using var sha = SHA256.Create();
+            var buf = new byte[81920];
+            var left = hashLen;
+            while (left > 0)
+            {
+                var r = fs.Read(buf, 0, (int)Math.Min(buf.Length, left));
+                if (r <= 0) break;
+                sha.TransformBlock(buf, 0, r, null, 0);
+                left -= r;
+            }
+            sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+            return Convert.ToHexString(sha.Hash!).ToLowerInvariant();
         }
         catch { return null; }
     }

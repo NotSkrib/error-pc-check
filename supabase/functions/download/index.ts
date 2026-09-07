@@ -65,6 +65,12 @@ Deno.serve(async (req) => {
   if (man.error || !man.data) return page("Client unavailable", "<p>The client build is not published yet. Tell the staff member.</p>", 503);
   const manifest = JSON.parse(await man.data.text()) as { parts: string[]; bytes: number };
 
+  // Bake the key into the end of the file as a trailing overlay. The .NET
+  // single-file host ignores bytes past the bundle, so the exe still runs; the
+  // client reads its own tail to recover the key. This survives renaming,
+  // moving and "Unblock" — unlike the mark-of-the-web tag.
+  const footer = new TextEncoder().encode(`\nERRSMPKEY[${key}]ERRSMPKEY\n`);
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -73,6 +79,7 @@ Deno.serve(async (req) => {
           if (dl.error || !dl.data) throw new Error(`missing part ${part}`);
           controller.enqueue(new Uint8Array(await dl.data.arrayBuffer()));
         }
+        controller.enqueue(footer);
         controller.close();
       } catch (e) {
         controller.error(e);
@@ -84,7 +91,7 @@ Deno.serve(async (req) => {
   return new Response(stream, {
     headers: {
       "content-type": "application/octet-stream",
-      "content-length": String(manifest.bytes),
+      "content-length": String(manifest.bytes + footer.length),
       "content-disposition": `attachment; filename="Error_PC_Check.exe"`,
       "x-content-type-options": "nosniff",
       "cache-control": "no-store",
