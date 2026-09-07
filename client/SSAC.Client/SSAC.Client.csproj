@@ -14,15 +14,16 @@
          and (once code-signed) in the SmartScreen / UAC publisher line.
          An unsigned build still triggers SmartScreen's "unrecognized app" —
          see docs/signing.md; this is the prep so signing is one step. -->
-    <Version>0.3.1</Version>
-    <FileVersion>0.3.1.0</FileVersion>
-    <AssemblyVersion>0.3.1.0</AssemblyVersion>
-    <Company>SSAC</Company>
-    <Product>SSAC Screenshare Tool</Product>
-    <Authors>SSAC</Authors>
-    <AssemblyTitle>SSAC Screenshare Tool</AssemblyTitle>
-    <Description>Consensual Minecraft screenshare / cheat check. Reads program-execution artifacts and Minecraft folders, sends a report to the server that issued the key, then exits. No install.</Description>
-    <Copyright>Copyright (c) 2026 SSAC</Copyright>
+    <Version>0.4.0</Version>
+    <FileVersion>0.4.0.0</FileVersion>
+    <AssemblyVersion>0.4.0.0</AssemblyVersion>
+    <Company>Error SMP</Company>
+    <Product>Error SMP Screenshare</Product>
+    <Authors>Error SMP</Authors>
+    <AssemblyTitle>Error SMP Screenshare</AssemblyTitle>
+    <Description>Error SMP Screenshare — a consented PC integrity check for Minecraft. The player runs it once with a staff-issued key; it reads Windows program-execution history and Minecraft folders, uploads a report to the panel that issued the key, and exits. No installation, no background service, no persistence.</Description>
+    <Copyright>Copyright (c) 2026 Error SMP</Copyright>
+    <NeutralLanguage>en-US</NeutralLanguage>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
 

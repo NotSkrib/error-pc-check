@@ -4,7 +4,7 @@ namespace SSAC.Client;
 
 public static class AppInfo
 {
-    public const string Version = "0.3.1";
+    public const string Version = "0.4.0";
     /// <summary>Set at scan start from the loaded SignatureDb; recorded in the report.</summary>
     public static string SignatureDbVersion { get; set; } = "embedded";
     // SaaS ingest base URL baked in; overridable for local dev with

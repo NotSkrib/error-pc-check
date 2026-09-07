@@ -206,31 +206,35 @@ public sealed class JvmInjectionModule : IScanModule
 
     private sealed record ProcInfo(string CommandLine, int ParentPid, string? ParentName);
 
+    // Scoped to java only — we never need any other process's command line, and a
+    // narrow query does not look like credential / recon enumeration to sandboxes.
     private static Dictionary<int, ProcInfo> ProcessCommandLines()
     {
-        var byPid = new Dictionary<int, (string Cmd, int Ppid)>();
-        var names = new Dictionary<int, string>();
+        var map = new Dictionary<int, ProcInfo>();
         try
         {
             using var s = new ManagementObjectSearcher(
-                "SELECT ProcessId, ParentProcessId, Name, CommandLine FROM Win32_Process");
+                "SELECT ProcessId, ParentProcessId, CommandLine FROM Win32_Process "
+                + "WHERE Name = 'javaw.exe' OR Name = 'java.exe'");
             foreach (ManagementObject o in s.Get())
             {
                 try
                 {
                     var pid = Convert.ToInt32(o["ProcessId"]);
-                    names[pid] = (o["Name"]?.ToString() ?? "").Replace(".exe", "", StringComparison.OrdinalIgnoreCase);
-                    byPid[pid] = (o["CommandLine"]?.ToString() ?? "", Convert.ToInt32(o["ParentProcessId"]));
+                    var ppid = Convert.ToInt32(o["ParentProcessId"]);
+                    map[pid] = new ProcInfo(o["CommandLine"]?.ToString() ?? "", ppid, ParentName(ppid));
                 }
                 catch { /* skip a row */ }
             }
         }
         catch { /* WMI unavailable — callers handle the empty map */ }
+        return map;
+    }
 
-        return byPid.ToDictionary(
-            kv => kv.Key,
-            kv => new ProcInfo(kv.Value.Cmd, kv.Value.Ppid,
-                names.TryGetValue(kv.Value.Ppid, out var n) ? n : null));
+    private static string? ParentName(int ppid)
+    {
+        try { return Process.GetProcessById(ppid).ProcessName; }
+        catch { return null; }
     }
 
     private static IEnumerable<string> ExtractClasspath(string cmd)
