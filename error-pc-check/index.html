@@ -7,26 +7,97 @@
     <title>PC Check</title>
     <style>
       :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; }
       body {
-        display: grid; place-items: center;
+        display: grid; place-items: center; padding: 1.5rem;
         font: 15px/1.6 ui-sans-serif, system-ui, "Segoe UI", sans-serif;
         color: #e9e9ec;
         background: radial-gradient(900px 500px at 50% -10%, rgba(229,72,77,0.10), transparent 60%), #07080a;
       }
-      main { max-width: 26rem; padding: 2rem 1.5rem; text-align: center; }
-      .m { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px;
-           background: linear-gradient(180deg, #f2555b, #8f2c30); color: #fff; font-weight: 800; margin-bottom: 1rem; }
-      h1 { font-size: 1.05rem; margin: 0 0 .5rem; }
-      p { margin: .35rem 0; color: #9aa0aa; }
+      main { max-width: 30rem; width: 100%; }
+      .brand { display: flex; align-items: center; gap: .6rem; margin-bottom: 1.25rem; }
+      .m { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px;
+           background: linear-gradient(180deg, #f2555b, #8f2c30); color: #fff; font-weight: 800; }
+      .brand span { font-weight: 600; }
+      .brand span b { color: #fff; }
+      h1 { font-size: 1.15rem; margin: 0 0 .25rem; color: #fff; }
+      .lead { color: #9aa0aa; margin: 0 0 1.25rem; }
+      .card { border: 1px solid #23252d; border-radius: 12px; background: #121319; padding: 1rem 1.1rem; }
+      .step { display: flex; gap: .7rem; padding: .5rem 0; }
+      .step:not(:last-child) { border-bottom: 1px solid #1e2027; }
+      .n { flex: none; width: 22px; height: 22px; border-radius: 999px; background: #23252d; color: #cdd0d6;
+           display: grid; place-items: center; font-size: 12px; font-weight: 700; margin-top: 1px; }
+      .step p { margin: 0; color: #c7cbd2; }
+      .step p b { color: #fff; }
+      .smartscreen {
+        margin-top: .8rem; border-radius: 8px; overflow: hidden; border: 1px solid #1e3a8a;
+        font-size: 13px;
+      }
+      .smartscreen .bar { background: #1b4bd6; color: #fff; padding: .55rem .8rem; font-weight: 600; }
+      .smartscreen .body { background: #0e1730; color: #b9c2e6; padding: .6rem .8rem; }
+      .smartscreen .body u { text-decoration: none; color: #fff; border-bottom: 2px solid #6ea0ff; padding-bottom: 1px; }
+      .again { margin-top: 1rem; color: #7d828c; font-size: 13px; }
+      .again a { color: #f2555b; }
+      .fine { margin-top: 1.1rem; color: #6b7078; font-size: 12.5px; }
+      noscript { color: #f2555b; }
     </style>
   </head>
   <body>
     <main>
-      <div class="m">E</div>
-      <h1>Error&nbsp;SMP &mdash; PC Check</h1>
-      <p>Your download should have started automatically.</p>
-      <p>If it didn&rsquo;t, ask the staff member who sent you this for a fresh link.</p>
+      <div class="brand"><span class="m">E</span><span>Error&nbsp;SMP <b>PC Check</b></span></div>
+      <h1 id="head">Starting your download…</h1>
+      <p class="lead" id="lead">Save the file, then double-click <b>Error_PC_Check.exe</b>.</p>
+
+      <div class="card">
+        <div class="step">
+          <div class="n">1</div>
+          <p>Windows may show a blue box titled <b>&ldquo;Windows protected your PC.&rdquo;</b> This is normal
+             for a new tool that isn&rsquo;t widely downloaded yet &mdash; it isn&rsquo;t a virus warning.</p>
+        </div>
+        <div class="step">
+          <div class="n">2</div>
+          <p>Click <b>More info</b>, then <b>Run anyway</b>.</p>
+        </div>
+        <div class="step">
+          <div class="n">3</div>
+          <p>A small window opens and runs the check by itself, then closes. Nothing is installed.</p>
+        </div>
+
+        <div class="smartscreen" aria-hidden="true">
+          <div class="bar">Windows protected your PC</div>
+          <div class="body">
+            Microsoft Defender SmartScreen prevented an unrecognised app from starting.<br />
+            <u>More info</u> &nbsp;&rarr;&nbsp; <u>Run anyway</u>
+          </div>
+        </div>
+      </div>
+
+      <p class="again">
+        Download didn&rsquo;t start? <a id="dl" href="#">Click here</a>.
+        <noscript><br />Enable JavaScript, or ask the staff member for a direct link.</noscript>
+      </p>
+      <p class="fine">Runs once &middot; no install &middot; no background service &middot; closes itself when done.</p>
     </main>
+
+    <script>
+      (function () {
+        // key comes from /r/<key> (rewritten to this page) or ?k=<key>
+        var m = location.pathname.match(/\/r\/([A-Za-z0-9_\-]{8,64})/);
+        var key = (m && m[1]) || new URLSearchParams(location.search).get("k") || "";
+        var dl = document.getElementById("dl");
+        if (!key) {
+          document.getElementById("head").textContent = "This link is incomplete";
+          document.getElementById("lead").textContent =
+            "Ask the staff member who sent you this for a fresh link.";
+          dl.parentElement.style.display = "none";
+          return;
+        }
+        var href = "/d/" + encodeURIComponent(key);
+        dl.setAttribute("href", href);
+        // kick off the download shortly after the page paints
+        setTimeout(function () { window.location.href = href; }, 700);
+      })();
+    </script>
   </body>
 </html>

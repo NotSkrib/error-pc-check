@@ -24,7 +24,9 @@ function downloadUrl(key: string) {
     const base = import.meta.env.VITE_SUPABASE_URL as string;
     return `${base}/functions/v1/download?key=${encodeURIComponent(key)}`;
   }
-  return `${DOWNLOAD_BASE}/d/${encodeURIComponent(key)}`;
+  // /r/<key> is a small page that auto-starts the download and shows the
+  // recipient the "More info -> Run anyway" step for the SmartScreen prompt.
+  return `${DOWNLOAD_BASE}/r/${encodeURIComponent(key)}`;
 }
 
 export default function Dashboard() {
