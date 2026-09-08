@@ -24,9 +24,8 @@ function downloadUrl(key: string) {
     const base = import.meta.env.VITE_SUPABASE_URL as string;
     return `${base}/functions/v1/download?key=${encodeURIComponent(key)}`;
   }
-  // /r/<key> is a small page that auto-starts the download and shows the
-  // recipient the "More info -> Run anyway" step for the SmartScreen prompt.
-  return `${DOWNLOAD_BASE}/r/${encodeURIComponent(key)}`;
+  // Straight to the file — /d/<key> is proxied to the download Edge Function.
+  return `${DOWNLOAD_BASE}/d/${encodeURIComponent(key)}`;
 }
 
 export default function Dashboard() {
@@ -35,6 +34,7 @@ export default function Dashboard() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [reports, setReports] = useState<Record<string, ReportRow>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [caseLabel, setCaseLabel] = useState("");
   const [suspect, setSuspect] = useState("");
   const [issued, setIssued] = useState<{ key: string; expires_at: string } | null>(null);
@@ -113,6 +113,16 @@ export default function Dashboard() {
     }
   }
 
+  async function refresh() {
+    if (!tenantId) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([loadSessions(tenantId), loadTenants(true)]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   useEffect(() => {
     loadTenants();
   }, []);
@@ -122,6 +132,14 @@ export default function Dashboard() {
       loadRole(tenantId);
     }
   }, [tenantId]);
+
+  // While a session is pending or mid-scan, poll so a report lands without an F5.
+  const hasLive = sessions.some((s) => s.status === "pending" || s.status === "consumed");
+  useEffect(() => {
+    if (!tenantId || !hasLive) return;
+    const id = setInterval(() => loadSessions(tenantId), 12000);
+    return () => clearInterval(id);
+  }, [tenantId, hasLive]);
 
   async function generateKey(e: React.FormEvent) {
     e.preventDefault();
@@ -268,11 +286,21 @@ export default function Dashboard() {
           <h2 className="text-sm font-semibold">
             Sessions <span className="ml-1 text-fg-dim">{sessions.length}</span>
           </h2>
-          {isAdmin && sessions.length > 0 && (
-            <button onClick={clearFinished} className="btn btn-ghost px-2.5 py-1 text-xs">
-              Clear finished
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={refresh}
+              disabled={refreshing}
+              className="btn btn-ghost px-2.5 py-1 text-xs"
+              title="Refresh sessions"
+            >
+              {refreshing ? "Refreshing…" : "↻ Refresh"}
             </button>
-          )}
+            {isAdmin && sessions.length > 0 && (
+              <button onClick={clearFinished} className="btn btn-ghost px-2.5 py-1 text-xs">
+                Clear finished
+              </button>
+            )}
+          </div>
         </div>
 
         {sessions.length === 0 ? (

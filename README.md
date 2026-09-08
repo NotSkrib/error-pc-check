@@ -1,6 +1,9 @@
-# SSAC — Screenshare Anti-Cheat
+# Error SMP Screenshare
 
 A **consensual remote forensic screenshare tool** for Minecraft (Java, Windows) cheat detection.
+
+Open source (MIT — see [`LICENSE`](LICENSE)). Client releases are code-signed via
+SignPath Foundation — see [`docs/open-source.md`](docs/open-source.md).
 
 Three parts:
 
@@ -22,7 +25,7 @@ Three parts:
 - **OS:** Windows only
 - **Game:** Minecraft Java Edition only
 - **Build line:** MVP = Phases 0–4 + 6 (out-of-instance forensics, Minecraft file/signature checks, reporting). Deep in-instance JVM/native scanning (Phase 5) is v2.
-- **Product model:** multi-tenant SaaS (per-server accounts, billing hooks, watermarked reports).
+- **Product model:** single community (Error SMP). Staff log in; low-friction guest access for people being screenshared; owner supervises all checks.
 
 ## Ethical guardrails (non-negotiable)
 

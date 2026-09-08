@@ -18,6 +18,11 @@ metadata (`SSAC.Client.csproj`). All that's missing is the signature.
 
 Self-signed certs do **not** work - SmartScreen ignores them.
 
+**Free route:** open-source the repo and get an OV cert + cloud signing from
+**SignPath Foundation** — see [`open-source.md`](open-source.md). Same reputation
+wait as any OV cert, but $0. `.github/workflows/release-client.yml` already wires
+it in.
+
 ## Sign the published exe
 
 After `dotnet publish` (see `docs/deploy.md`), before splitting/uploading:

@@ -1,11 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/r/:key", "destination": "/d/:key", "permanent": false }
+  ],
   "rewrites": [
     {
       "source": "/d/:key",
       "destination": "https://ugxzpmsotzfhoqraohvv.supabase.co/functions/v1/download?key=:key"
     },
-    { "source": "/r/:key", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

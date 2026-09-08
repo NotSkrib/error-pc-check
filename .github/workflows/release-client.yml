@@ -1,0 +1,79 @@
+name: Release client (build + SignPath sign)
+
+# Push a tag like v0.4.1 to build the client, get it code-signed by SignPath,
+# attach the signed exe to a GitHub Release, and (if Supabase creds are set)
+# publish the split parts so the download link serves the signed build.
+#
+# Required repo config once SignPath Foundation has approved the project:
+#   secrets.SIGNPATH_API_TOKEN            - SignPath CI user API token
+#   vars.SIGNPATH_ORGANIZATION_ID         - SignPath organization id (GUID)
+#   vars.SIGNPATH_PROJECT_SLUG            - e.g. error-pc-check
+#   vars.SIGNPATH_SIGNING_POLICY_SLUG     - e.g. release-signing
+# Optional (auto-publishes the signed build):
+#   secrets.SUPABASE_URL                  - https://<ref>.supabase.co
+#   secrets.SUPABASE_SERVICE_ROLE_KEY
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build-sign:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "8.0.x" }
+
+      - name: Build + obfuscate + publish
+        shell: bash
+        run: |
+          dotnet tool restore
+          bash scripts/build-client.sh
+          mkdir dist
+          cp client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe dist/ssac-screenshare.exe
+
+      - name: Upload unsigned artifact
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned
+          path: dist/ssac-screenshare.exe
+
+      - name: Submit to SignPath for signing
+        id: sign
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Stage signed exe
+        shell: bash
+        run: |
+          mkdir -p out
+          cp signed/ssac-screenshare.exe out/Error_PC_Check.exe
+          sha256sum out/Error_PC_Check.exe
+
+      - name: Publish signed build to Supabase Storage
+        if: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        shell: bash
+        env:
+          SUPA_URL: ${{ secrets.SUPABASE_URL }}
+          SUPA_SERVICE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/split-upload.mjs signed/ssac-screenshare.exe
+
+      - name: Attach signed exe to the Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/Error_PC_Check.exe

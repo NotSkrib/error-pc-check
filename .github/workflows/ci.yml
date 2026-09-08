@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  panel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20", cache: "npm", cache-dependency-path: panel/package-lock.json }
+      - run: npm ci
+        working-directory: panel
+      - run: npx tsc --noEmit
+        working-directory: panel
+      - run: npm run build
+        working-directory: panel
+
+  client:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "8.0.x" }
+      - run: dotnet build client/SSAC.Client/SSAC.Client.csproj -c Release -p:PublishReadyToRun=false
