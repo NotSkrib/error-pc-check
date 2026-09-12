@@ -149,7 +149,7 @@ export default function Dashboard() {
     const { data, error } = await supabase.rpc("create_session", {
       p_tenant: tenantId,
       p_case_label: caseLabel.trim(),
-      p_suspect_label: suspect.trim() || null,
+      p_suspect_label: suspect.trim(),
     });
     if (error) return setErr(error.message);
     const row = Array.isArray(data) ? data[0] : data;
@@ -211,22 +211,23 @@ export default function Dashboard() {
         <div className="p-5">
           <form onSubmit={generateKey} className="flex flex-wrap items-end gap-3">
             <div className="min-w-[200px] flex-1">
-              <label className="label">Case</label>
+              <label className="label">Checked by</label>
               <input
                 className="input mt-1"
-                placeholder="#cheat-report-412"
+                placeholder="Your name"
                 value={caseLabel}
                 onChange={(e) => setCaseLabel(e.target.value)}
                 required
               />
             </div>
             <div className="min-w-[180px] flex-1">
-              <label className="label">Suspect · optional</label>
+              <label className="label">Minecraft username</label>
               <input
                 className="input mt-1"
                 placeholder="MC username"
                 value={suspect}
                 onChange={(e) => setSuspect(e.target.value)}
+                required
               />
             </div>
             <button className="btn btn-primary h-[38px] px-4">Generate key</button>
@@ -312,8 +313,8 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-ink-line text-left text-[11px] uppercase tracking-[0.12em] text-fg-dim">
-                  <th className="px-5 py-2.5 font-medium">Case</th>
-                  <th className="px-3 py-2.5 font-medium">Suspect</th>
+                  <th className="px-5 py-2.5 font-medium">Checked by</th>
+                  <th className="px-3 py-2.5 font-medium">MC Username</th>
                   <th className="px-3 py-2.5 font-medium">By</th>
                   <th className="px-3 py-2.5 font-medium">Key</th>
                   <th className="px-3 py-2.5 font-medium">Status</th>
