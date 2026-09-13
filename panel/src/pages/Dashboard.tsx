@@ -11,12 +11,13 @@ interface ReportRow {
 
 
 /** The link staff hand out. It lives on a separate, bare host (the `error-pc-check`
- *  Vercel project) whose `/` is a neutral page — the recipient never sees the
+ *  Railway service) whose `/` is a neutral page — the recipient never sees the
  *  staff panel. `/d/:key` there proxies to the download Edge Function.
  *  Override with VITE_DOWNLOAD_BASE; on localhost dev, fall back to the
  *  function URL directly. */
 const DOWNLOAD_BASE =
-  (import.meta.env.VITE_DOWNLOAD_BASE as string | undefined) ?? "https://error-pc-check.vercel.app";
+  (import.meta.env.VITE_DOWNLOAD_BASE as string | undefined) ??
+  "https://error-pc-check-production.up.railway.app";
 
 function downloadUrl(key: string) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
