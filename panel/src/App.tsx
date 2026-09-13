@@ -5,6 +5,8 @@ import Dashboard from "./pages/Dashboard";
 import ReportView from "./pages/ReportView";
 import ClientErrors from "./pages/ClientErrors";
 
+const PANEL_VERSION = "v2.2";
+
 function Shell({ children }: { children: React.ReactNode }) {
   const { session, signOut } = useAuth();
   const nav = useNavigate();
@@ -23,6 +25,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             <span className="text-[15px] font-semibold tracking-tight text-fg">
               Error&nbsp;SMP <span className="font-normal text-fg-dim">/ Screenshare</span>
             </span>
+            <span className="chip border-ink-line2 text-fg-mut">{PANEL_VERSION}</span>
           </Link>
           <div className="flex items-center gap-3 text-sm">
             {!isGuest && (
