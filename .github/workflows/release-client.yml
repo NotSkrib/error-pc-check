@@ -1,7 +1,7 @@
 name: Release client (build + SignPath sign)
 
 # Push a tag like v0.4.1 to build the client, get it code-signed by SignPath,
-# attach the signed exe to a GitHub Release, and (if Supabase creds are set)
+# attach the signed exe to a GitHub Release, and (if R2 creds are set)
 # publish the split parts so the download link serves the signed build.
 #
 # Required repo config once SignPath Foundation has approved the project:
@@ -10,8 +10,10 @@ name: Release client (build + SignPath sign)
 #   vars.SIGNPATH_PROJECT_SLUG            - e.g. error-pc-check
 #   vars.SIGNPATH_SIGNING_POLICY_SLUG     - e.g. release-signing
 # Optional (auto-publishes the signed build):
-#   secrets.SUPABASE_URL                  - https://<ref>.supabase.co
-#   secrets.SUPABASE_SERVICE_ROLE_KEY
+#   secrets.R2_ACCOUNT_ID
+#   secrets.R2_ACCESS_KEY_ID
+#   secrets.R2_SECRET_ACCESS_KEY
+#   vars.R2_BUCKET                        - defaults to ssac-assets
 
 on:
   push:
@@ -65,13 +67,17 @@ jobs:
           cp signed/ssac-screenshare.exe out/Error_PC_Check.exe
           sha256sum out/Error_PC_Check.exe
 
-      - name: Publish signed build to Supabase Storage
-        if: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+      - name: Publish signed build to Cloudflare R2
+        if: ${{ secrets.R2_ACCESS_KEY_ID != '' }}
         shell: bash
         env:
-          SUPA_URL: ${{ secrets.SUPABASE_URL }}
-          SUPA_SERVICE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: node scripts/split-upload.mjs signed/ssac-screenshare.exe
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+        run: |
+          npm ci
+          node scripts/split-upload.mjs signed/ssac-screenshare.exe
 
       - name: Attach signed exe to the Release
         uses: softprops/action-gh-release@v2

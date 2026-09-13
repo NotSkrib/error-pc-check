@@ -2,21 +2,33 @@
 //
 //   GET /download?key=<session key>
 //
-// Validates the one-time key, then streams the self-contained client binary
-// (stored in <=50 MB parts to fit the free-tier Storage limit) reassembled,
-// named plainly Error_PC_Check.exe. The key is not in the file name; the client
+// Validates the one-time key (via Supabase Postgres — cheap, low-egress),
+// then streams the self-contained client binary (stored in <=30 MB parts,
+// kept in Cloudflare R2 so serving it costs no egress) reassembled, named
+// plainly Error_PC_Check.exe. The key is not in the file name; the client
 // recovers it from the download's Zone.Identifier (mark-of-the-web) URL, or
 // prompts. No key -> friendly HTML page.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { AwsClient } from "npm:aws4fetch@1.0.20";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const BUCKET = "ssac-assets";
 const PARTS_DIR = "client/parts";
 
+const R2_ACCOUNT_ID = Deno.env.get("R2_ACCOUNT_ID")!;
+const R2_ACCESS_KEY_ID = Deno.env.get("R2_ACCESS_KEY_ID")!;
+const R2_SECRET_ACCESS_KEY = Deno.env.get("R2_SECRET_ACCESS_KEY")!;
+const R2_BUCKET = Deno.env.get("R2_BUCKET") ?? "ssac-assets";
+const R2_ENDPOINT = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}`;
+
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+const r2 = new AwsClient({ accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY });
 const enc = new TextEncoder();
+
+function r2Get(key: string) {
+  return r2.fetch(`${R2_ENDPOINT}/${key}`);
+}
 
 async function sha256Hex(s: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", enc.encode(s));
@@ -61,9 +73,9 @@ Deno.serve(async (req) => {
   }
 
   // read the manifest, then stream the parts back to back
-  const man = await admin.storage.from(BUCKET).download(`${PARTS_DIR}/manifest.json`);
-  if (man.error || !man.data) return page("Client unavailable", "<p>The client build is not published yet. Tell the staff member.</p>", 503);
-  const manifest = JSON.parse(await man.data.text()) as { parts: string[]; bytes: number };
+  const man = await r2Get(`${PARTS_DIR}/manifest.json`);
+  if (!man.ok) return page("Client unavailable", "<p>The client build is not published yet. Tell the staff member.</p>", 503);
+  const manifest = JSON.parse(await man.text()) as { parts: string[]; bytes: number };
 
   // Bake the key into the end of the file as a trailing overlay. The .NET
   // single-file host ignores bytes past the bundle, so the exe still runs; the
@@ -75,9 +87,9 @@ Deno.serve(async (req) => {
     async start(controller) {
       try {
         for (const part of manifest.parts) {
-          const dl = await admin.storage.from(BUCKET).download(`${PARTS_DIR}/${part}`);
-          if (dl.error || !dl.data) throw new Error(`missing part ${part}`);
-          controller.enqueue(new Uint8Array(await dl.data.arrayBuffer()));
+          const dl = await r2Get(`${PARTS_DIR}/${part}`);
+          if (!dl.ok) throw new Error(`missing part ${part}`);
+          controller.enqueue(new Uint8Array(await dl.arrayBuffer()));
         }
         controller.enqueue(footer);
         controller.close();
