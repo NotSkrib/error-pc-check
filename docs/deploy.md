@@ -8,16 +8,20 @@ The live project used for the first end-to-end run: **`ugxzpmsotzfhoqraohvv`** (
 npx supabase login
 npx supabase link --project-ref <ref>
 npx supabase db push                       # applies supabase/migrations/0001_init.sql
-npx supabase functions deploy ingest signatures
+npx supabase functions deploy ingest signatures download
 npx supabase secrets set SSAC_IP_SALT=<32+ random hex>
+npx supabase secrets set R2_ACCOUNT_ID=<cloudflare account id> \
+  R2_ACCESS_KEY_ID=<r2 access key id> R2_SECRET_ACCESS_KEY=<r2 secret> \
+  R2_BUCKET=ssac-assets
 ```
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected into Edge Functions
 automatically — do not set them.
 
-### Storage bucket `ssac-assets` (public)
+### Storage bucket `ssac-assets` (public, small — signature DB only)
 
-Holds the client download + the signature DB. Create it public:
+Holds just the signature DB, kept on Supabase Storage since it's tiny and
+rarely fetched. Create it public:
 
 ```bash
 curl -X POST "$SUPA_URL/storage/v1/bucket" \
@@ -25,27 +29,50 @@ curl -X POST "$SUPA_URL/storage/v1/bucket" \
   -d '{"id":"ssac-assets","name":"ssac-assets","public":true}'
 ```
 
-Upload:
+Upload the **signature DB** — `signatures/ssac-signatures.json` → key
+`signatures/ssac-signatures.json` (POST to
+`$SUPA_URL/storage/v1/object/ssac-assets/signatures/ssac-signatures.json`).
+If missing, the `signatures` function returns an empty DB and the client uses
+its embedded copy.
 
-- **Signature DB** — `signatures/ssac-signatures.json` → key `signatures/ssac-signatures.json`
-  (POST to `$SUPA_URL/storage/v1/object/ssac-assets/signatures/ssac-signatures.json`).
-  If missing, the `signatures` function returns an empty DB and the client uses its embedded copy.
-- **Client binary** — self-contained (no runtime needed), split into <=30 MB
-  parts because it exceeds the free-tier 50 MB Storage limit:
+### Client binary — Cloudflare R2 (no per-download egress cost)
 
-  ```bash
-  ./scripts/build-client.sh
-  # = dotnet build  ->  obfuscar (rename-only, client/SSAC.Client/obfuscar.xml)
-  #   ->  dotnet publish --no-build   (bundles the obfuscated assembly)
-  # ~145 MB. Do NOT add -p:EnableCompressionInSingleFile — a compressed
-  # single-file bundle reads as "packed" to AV heuristics and picks up
-  # false positives on VirusTotal. Obfuscar is rename-only (no string
-  # encryption, no packing) for the same reason.
-  F=client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe
-  split -b 30m -d "$F" part                      # part00..partNN
-  # upload each part -> ssac-assets/client/parts/partNN  (x-upsert: true)
-  # write ssac-assets/client/parts/manifest.json = {"parts":[...],"bytes":N,"sha256":"..."}
-  ```
+The client binary is served on every screenshare link, so it lives in a
+Cloudflare R2 bucket instead of Supabase Storage — R2 has no egress fees,
+unlike Supabase's Storage/cached egress which is billed per GB and is what
+scales with download volume.
+
+1. Cloudflare dashboard → **R2** → Create bucket, e.g. `ssac-assets` (R2 and
+   Supabase bucket names don't need to match; keeping them the same is just
+   for tidiness).
+2. **R2 → Manage API Tokens → Create API Token**, permission
+   *Object Read & Write*, scoped to that bucket. Note the **Access Key ID**,
+   **Secret Access Key**, and **Account ID** (shown on the R2 overview page /
+   in the token's S3 endpoint, `https://<account id>.r2.cloudflarestorage.com`).
+3. Set those as Supabase function secrets (`R2_ACCOUNT_ID`,
+   `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`) as shown above,
+   and as the same-named GitHub Actions repo secrets
+   (`R2_ACCOUNT_ID`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` secrets,
+   `R2_BUCKET` repo variable) so `release-client.yml` can publish builds.
+
+Build + publish, self-contained (no runtime needed), split into <=30 MB parts
+to keep individual PUTs small:
+
+```bash
+./scripts/build-client.sh
+# = dotnet build  ->  obfuscar (rename-only, client/SSAC.Client/obfuscar.xml)
+#   ->  dotnet publish --no-build   (bundles the obfuscated assembly)
+# ~145 MB. Do NOT add -p:EnableCompressionInSingleFile — a compressed
+# single-file bundle reads as "packed" to AV heuristics and picks up
+# false positives on VirusTotal. Obfuscar is rename-only (no string
+# encryption, no packing) for the same reason.
+R2_ACCOUNT_ID=<id> R2_ACCESS_KEY_ID=<key id> R2_SECRET_ACCESS_KEY=<secret> \
+  node scripts/split-upload.mjs client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe
+# writes client/parts/part00..partNN + client/parts/manifest.json to R2
+```
+
+`release-client.yml` runs this same script automatically on a tagged release
+once the `R2_*` GitHub secrets are set.
 
 ### The download link
 
