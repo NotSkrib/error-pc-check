@@ -49,7 +49,7 @@ export default function Staff() {
       tenant_id: t.id,
     });
     if (error) {
-      setAuthorized(false);
+      setAuthorized(!/not authorized/i.test(error));
       setErr(error);
     } else {
       setAccounts(data?.accounts ?? []);

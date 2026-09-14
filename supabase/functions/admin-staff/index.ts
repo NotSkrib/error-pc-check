@@ -20,8 +20,20 @@ const EMAIL_DOMAIN = "errorsmp.panel";
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
+// Called via fetch() from the panel's own browser origin, so (unlike the
+// built-in GoTrue/PostgREST endpoints) this needs its own CORS handling —
+// Edge Functions don't get default CORS headers.
+const CORS_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers": "authorization, content-type",
+  "access-control-allow-methods": "POST, OPTIONS",
+};
+
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", ...CORS_HEADERS },
+  });
 }
 
 function emailFor(username: string): string {
@@ -35,6 +47,7 @@ function genPassword(): string {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
   const auth = req.headers.get("authorization") ?? "";
