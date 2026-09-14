@@ -25,7 +25,7 @@ const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: 
 // Edge Functions don't get default CORS headers.
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
-  "access-control-allow-headers": "authorization, content-type",
+  "access-control-allow-headers": "authorization, content-type, apikey, x-client-info",
   "access-control-allow-methods": "POST, OPTIONS",
 };
 
