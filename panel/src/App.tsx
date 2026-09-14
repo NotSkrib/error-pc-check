@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ReportView from "./pages/ReportView";
 import ClientErrors from "./pages/ClientErrors";
+import Staff from "./pages/Staff";
 
 const PANEL_VERSION = "v2.2";
 
@@ -27,6 +28,9 @@ function Shell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3 text-sm">
             <Link to="/errors" className="text-fg-dim hover:text-fg-mut">
               Crashes
+            </Link>
+            <Link to="/staff" className="text-fg-dim hover:text-fg-mut">
+              Staff
             </Link>
             <span className="flex items-center gap-1.5 text-fg-mut">
               <span className="max-w-[200px] truncate">{who}</span>
@@ -78,6 +82,16 @@ export default function App() {
           <RequireAuth>
             <Shell>
               <ClientErrors />
+            </Shell>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/staff"
+        element={
+          <RequireAuth>
+            <Shell>
+              <Staff />
             </Shell>
           </RequireAuth>
         }
