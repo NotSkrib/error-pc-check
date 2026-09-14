@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
           email: u?.email ?? null,
           display_name: (u?.user_metadata?.display_name as string | undefined) ?? null,
           created_at: u?.created_at ?? null,
+          last_sign_in_at: u?.last_sign_in_at ?? null,
         };
       });
     return json({ accounts });

@@ -9,6 +9,12 @@ interface StaffAccount {
   email: string | null;
   display_name: string | null;
   created_at: string | null;
+  last_sign_in_at: string | null;
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function callAdminStaff<T>(body: Record<string, unknown>): Promise<{ data: T | null; error: string | null }> {
@@ -179,6 +185,8 @@ export default function Staff() {
                   <th className="px-5 py-2.5 font-medium">Name</th>
                   <th className="px-3 py-2.5 font-medium">Email</th>
                   <th className="px-3 py-2.5 font-medium">Role</th>
+                  <th className="px-3 py-2.5 font-medium">Created</th>
+                  <th className="px-3 py-2.5 font-medium">Last sign-in</th>
                   <th className="px-5 py-2.5" />
                 </tr>
               </thead>
@@ -188,6 +196,8 @@ export default function Staff() {
                     <td className="px-5 py-3 font-medium">{a.display_name ?? "—"}</td>
                     <td className="px-3 py-3 text-fg-mut">{a.email}</td>
                     <td className="px-3 py-3 text-xs text-fg-mut">{a.role}</td>
+                    <td className="px-3 py-3 text-xs text-fg-dim">{formatDate(a.created_at)}</td>
+                    <td className="px-3 py-3 text-xs text-fg-dim">{formatDate(a.last_sign_in_at)}</td>
                     <td className="px-5 py-3 text-right whitespace-nowrap">
                       <button
                         onClick={() => resetPassword(a)}
