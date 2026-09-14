@@ -73,21 +73,12 @@ export default function Dashboard() {
     loadSessions(tenantId);
   }
 
-  async function loadTenants(triedGuestJoin = false) {
+  async function loadTenants() {
     const { data, error } = await supabase
       .from("tenants")
       .select("id,name,slug,retention_days,plan,created_at")
       .order("created_at");
     if (error) setErr(error.message);
-
-    // A guest whose anonymous session resumed without a membership: self-heal.
-    if ((data?.length ?? 0) === 0 && !triedGuestJoin) {
-      const { data: u } = await supabase.auth.getUser();
-      if (u.user?.is_anonymous) {
-        await supabase.rpc("join_as_guest");
-        return loadTenants(true);
-      }
-    }
 
     setTenants(data ?? []);
     setTenantId((prev) => prev ?? data?.[0]?.id ?? null);
@@ -118,7 +109,7 @@ export default function Dashboard() {
     if (!tenantId) return;
     setRefreshing(true);
     try {
-      await Promise.all([loadSessions(tenantId), loadTenants(true)]);
+      await Promise.all([loadSessions(tenantId), loadTenants()]);
     } finally {
       setRefreshing(false);
     }
@@ -168,8 +159,7 @@ export default function Dashboard() {
       <div className="card mx-auto max-w-md p-6">
         <h2 className="text-base font-semibold">No access yet</h2>
         <p className="mt-1.5 text-sm text-fg-mut">
-          This account isn't attached to Error SMP. Ask an admin to add you, or sign out and use{" "}
-          <span className="text-fg">Continue as guest</span>.
+          This account isn't attached to Error SMP. Ask an admin to add you.
         </p>
         {err && <p className="mt-3 text-sm text-brand">{err}</p>}
       </div>

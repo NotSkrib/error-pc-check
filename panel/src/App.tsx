@@ -10,10 +10,7 @@ const PANEL_VERSION = "v2.2";
 function Shell({ children }: { children: React.ReactNode }) {
   const { session, signOut } = useAuth();
   const nav = useNavigate();
-  const isGuest = session?.user.is_anonymous;
-  const who = isGuest
-    ? (session?.user.user_metadata?.display_name as string | undefined) ?? "Guest"
-    : session?.user.email;
+  const who = session?.user.email;
 
   return (
     <div className="min-h-full">
@@ -28,15 +25,10 @@ function Shell({ children }: { children: React.ReactNode }) {
             <span className="chip border-ink-line2 text-fg-mut">{PANEL_VERSION}</span>
           </Link>
           <div className="flex items-center gap-3 text-sm">
-            {!isGuest && (
-              <Link to="/errors" className="text-fg-dim hover:text-fg-mut">
-                Crashes
-              </Link>
-            )}
+            <Link to="/errors" className="text-fg-dim hover:text-fg-mut">
+              Crashes
+            </Link>
             <span className="flex items-center gap-1.5 text-fg-mut">
-              {isGuest && (
-                <span className="chip border-ink-line2 text-fg-mut">guest</span>
-              )}
               <span className="max-w-[200px] truncate">{who}</span>
             </span>
             <button
