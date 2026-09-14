@@ -10,6 +10,7 @@ interface StaffAccount {
   display_name: string | null;
   created_at: string | null;
   last_sign_in_at: string | null;
+  password: string | null;
 }
 
 function formatDate(iso: string | null): string {
@@ -184,6 +185,7 @@ export default function Staff() {
                 <tr className="border-b border-ink-line text-left text-[11px] uppercase tracking-[0.12em] text-fg-dim">
                   <th className="px-5 py-2.5 font-medium">Name</th>
                   <th className="px-3 py-2.5 font-medium">Email</th>
+                  <th className="px-3 py-2.5 font-medium">Password</th>
                   <th className="px-3 py-2.5 font-medium">Role</th>
                   <th className="px-3 py-2.5 font-medium">Created</th>
                   <th className="px-3 py-2.5 font-medium">Last sign-in</th>
@@ -195,6 +197,13 @@ export default function Staff() {
                   <tr key={a.user_id} className="group border-b border-ink-line/60 last:border-0 hover:bg-white/[0.02]">
                     <td className="px-5 py-3 font-medium">{a.display_name ?? "—"}</td>
                     <td className="px-3 py-3 text-fg-mut">{a.email}</td>
+                    <td className="px-3 py-3 font-mono text-xs">
+                      {a.password ? (
+                        <span className="chip border-ink-line2 text-fg">{a.password}</span>
+                      ) : (
+                        <span className="text-fg-dim">reset to reveal</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-xs text-fg-mut">{a.role}</td>
                     <td className="px-3 py-3 text-xs text-fg-dim">{formatDate(a.created_at)}</td>
                     <td className="px-3 py-3 text-xs text-fg-dim">{formatDate(a.last_sign_in_at)}</td>

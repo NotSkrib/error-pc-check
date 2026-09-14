@@ -86,6 +86,11 @@ Deno.serve(async (req) => {
 
     const { data: usersPage } = await admin.auth.admin.listUsers({ perPage: 200 });
     const byId = new Map(usersPage?.users.map((u) => [u.id, u]) ?? []);
+    const { data: creds } = await admin
+      .from("staff_credentials")
+      .select("user_id, password")
+      .eq("tenant_id", tenantId);
+    const passwordById = new Map((creds ?? []).map((c) => [c.user_id, c.password]));
     // Historical guest ("Continue as guest") sign-ins also landed as checker
     // members of this tenant before guest access was removed — they aren't
     // staff accounts, so leave them out of this list.
@@ -100,6 +105,7 @@ Deno.serve(async (req) => {
           display_name: (u?.user_metadata?.display_name as string | undefined) ?? null,
           created_at: u?.created_at ?? null,
           last_sign_in_at: u?.last_sign_in_at ?? null,
+          password: passwordById.get(m.user_id) ?? null,
         };
       });
     return json({ accounts });
@@ -118,6 +124,9 @@ Deno.serve(async (req) => {
     });
     if (error) return json({ error: error.message }, 409);
     await admin.from("memberships").upsert({ tenant_id: tenantId, user_id: data.user.id, role: "checker" });
+    await admin
+      .from("staff_credentials")
+      .upsert({ tenant_id: tenantId, user_id: data.user.id, password, updated_at: new Date().toISOString() });
     return json({ user_id: data.user.id, email, password });
   }
 
@@ -127,6 +136,9 @@ Deno.serve(async (req) => {
     const password = genPassword();
     const { error } = await admin.auth.admin.updateUserById(userId, { password });
     if (error) return json({ error: error.message }, 400);
+    await admin
+      .from("staff_credentials")
+      .upsert({ tenant_id: tenantId, user_id: userId, password, updated_at: new Date().toISOString() });
     return json({ user_id: userId, password });
   }
 
@@ -139,6 +151,7 @@ Deno.serve(async (req) => {
       .eq("tenant_id", tenantId)
       .eq("user_id", userId);
     if (error) return json({ error: error.message }, 400);
+    await admin.from("staff_credentials").delete().eq("tenant_id", tenantId).eq("user_id", userId);
     return json({ ok: true });
   }
 
