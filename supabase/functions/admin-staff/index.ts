@@ -73,16 +73,21 @@ Deno.serve(async (req) => {
 
     const { data: usersPage } = await admin.auth.admin.listUsers({ perPage: 200 });
     const byId = new Map(usersPage?.users.map((u) => [u.id, u]) ?? []);
-    const accounts = (members ?? []).map((m) => {
-      const u = byId.get(m.user_id);
-      return {
-        user_id: m.user_id,
-        role: m.role,
-        email: u?.email ?? null,
-        display_name: (u?.user_metadata?.display_name as string | undefined) ?? null,
-        created_at: u?.created_at ?? null,
-      };
-    });
+    // Historical guest ("Continue as guest") sign-ins also landed as checker
+    // members of this tenant before guest access was removed — they aren't
+    // staff accounts, so leave them out of this list.
+    const accounts = (members ?? [])
+      .filter((m) => !byId.get(m.user_id)?.is_anonymous)
+      .map((m) => {
+        const u = byId.get(m.user_id);
+        return {
+          user_id: m.user_id,
+          role: m.role,
+          email: u?.email ?? null,
+          display_name: (u?.user_metadata?.display_name as string | undefined) ?? null,
+          created_at: u?.created_at ?? null,
+        };
+      });
     return json({ accounts });
   }
 
