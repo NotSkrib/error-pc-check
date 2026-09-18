@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.07.1",
-  "updated": "2026-09-07",
+  "version": "2026.09.19.1",
+  "updated": "2026-09-19",
   "note": "SSAC known-cheat signature seed DB (docs/phase-0-design.md §7). Matchers use publicly known names, package identifiers and log banners only. file_hash matchers are community-contributed and intentionally empty in the seed. A signature matches when the summed weight of its matched matchers >= min_confidence. The client uses whichever of (embedded copy, fetched copy) has the newer version and records the version used in every report.",
   "matcher_kinds": {
     "file_name_regex": "regex tested against each file name in mods/ and versions/",
@@ -178,7 +178,7 @@
         { "kind": "string", "value": "KillAura", "weight": 1 },
         { "kind": "string", "value": "AimAssist", "weight": 1 },
         { "kind": "string", "value": "Autoclicker", "weight": 1 },
-        { "kind": "log_regex", "value": "(?i)(kill ?aura|aim ?assist|trigger ?bot|reach ?hack|no ?fall) (enabled|toggled|module)", "weight": 3 }
+        { "kind": "log_regex", "value": "(?i)(kill ?aura|aim ?assist|trigger ?bot|reach ?hack|no ?fall|ghost ?mode|self ?destruct|auto ?clicker) (enabled|toggled|module)", "weight": 3 }
       ],
       "references": []
     },
@@ -197,6 +197,178 @@
         { "kind": "log_regex", "value": "(?i)\\[Zenith\\]|Zenith Macros?|ZenithClient|zenithmacros\\.store|zenith.*(macro|module) (enabled|toggled|loaded)", "weight": 3 }
       ],
       "references": ["https://zenithmacros.store"]
+    },
+    {
+      "id": "198-macro", "name": "198 Macro (external PvP macro client)", "family": "198macro", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)^198[-_ ]?macros?[-_ v0-9.]*\\.(jar|exe)$", "weight": 2 },
+        { "kind": "file_name_regex", "value": "(?i)198[-_ ]?macros?", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)198[-_ ]?macros?.*(enabled|toggled|loaded|client)", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "whiteout-client", "name": "Whiteout", "family": "whiteout", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)whiteout.*(client|ghost|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Whiteout (ghost )?client", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "dream-client", "name": "Dream", "family": "dream", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)dream[-_ ]?(client|ghost|cheat).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Dream (ghost )?client (v?\\d|loaded|injected)", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "itami-client", "name": "Itami", "family": "itami", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)itami.*(client|ghost|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Itami (ghost )?client", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "raven-client", "name": "Raven", "family": "raven", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)raven[-_ ]?(client|ghost|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Raven (ghost )?client", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "skilled-client", "name": "Skilled", "family": "skilled", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)skilled[-_ ]?(client|ghost|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Skilled (ghost )?client", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "antic-client", "name": "Antic", "family": "antic", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)antic[-_ ]?(client|ghost|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Antic (ghost )?client", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "drip-client", "name": "Drip", "family": "drip", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)drip[-_ ]?(client|ghost|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Drip (ghost )?client", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "echo-client", "name": "Echo", "family": "echo", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)echo[-_ ]?(client|ghost|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Echo (ghost )?client", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "karma-client", "name": "Karma", "family": "karma", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)karma[-_ ]?(client|ghost|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Karma (ghost )?client", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "manthe-client", "name": "Manthe", "family": "manthe", "type": "native",
+      "severity_hint": "critical", "min_confidence": 3,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)manthe.*(client|ghost|inject).*\\.(exe|jar)", "weight": 3 },
+        { "kind": "log_regex", "value": "(?i)Manthe (ghost )?client", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "rise-client", "name": "Rise", "family": "rise", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)^rise[-_ v0-9.]*\\.jar$", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)Rise (client )?v?\\d", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "moon-client", "name": "Moon", "family": "moon", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)^moon[-_ ]?client[-_ v0-9.]*\\.jar$", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)Moon ?Client v?\\d", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "tenacity-client", "name": "Tenacity", "family": "tenacity", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)^tenacity[-_ v0-9.]*\\.jar$", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)Tenacity (client )?v?\\d", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "astolfo-client", "name": "Astolfo", "family": "astolfo", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)^astolfo[-_ v0-9.]*\\.jar$", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)Astolfo (client )?v?\\d", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "exhibition-client", "name": "Exhibition", "family": "exhibition", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)^exhibition[-_ v0-9.]*\\.jar$", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)Exhibition (client )?v?\\d", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "flux-client", "name": "Flux", "family": "flux", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)^flux[-_ ]?client[-_ v0-9.]*\\.jar$", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)Flux ?Client v?\\d", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "azura-client", "name": "Azura", "family": "azura", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)^azura[-_ v0-9.]*\\.jar$", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)Azura (client )?v?\\d", "weight": 3 }
+      ],
+      "references": []
+    },
+    {
+      "id": "fdp-client", "name": "FDP", "family": "fdp", "type": "mod",
+      "severity_hint": "high", "min_confidence": 2,
+      "matchers": [
+        { "kind": "file_name_regex", "value": "(?i)^fdp[-_ ]?client[-_ v0-9.]*\\.jar$", "weight": 2 },
+        { "kind": "log_regex", "value": "(?i)\\bFDP ?Client\\b", "weight": 3 }
+      ],
+      "references": []
     }
   ]
 }
