@@ -415,14 +415,20 @@ public sealed class PowerShellHistoryModule : IScanModule
     public string Name => "powershell-history";
     public bool RequiresElevation => false;
 
-    private static readonly (string Needle, Severity Sev, string Why)[] Rules =
+    /// <summary>Shared with <see cref="PowerShellEventLogModule"/> so both the typed-history
+    /// check and the script-block-logging check flag the same command patterns.</summary>
+    internal static readonly (string Needle, Severity Sev, string Why)[] Rules =
     [
         ("disablerealtimemonitoring", Severity.High, "disables Windows Defender real-time protection"),
         ("add-mppreference", Severity.High, "adds a Windows Defender exclusion"),
         ("-javaagent", Severity.High, "launches Java with an instrumentation agent"),
         ("inject", Severity.High, "references process injection"),
+        ("invoke-expression", Severity.High, "pipes downloaded content into Invoke-Expression — the classic fetch-and-run pattern"),
+        ("| iex", Severity.High, "pipes downloaded content into iex — the classic fetch-and-run pattern"),
         ("invoke-webrequest", Severity.Medium, "downloads a file"),
+        ("invoke-restmethod", Severity.Medium, "downloads a file"),
         ("iwr ", Severity.Medium, "downloads a file"),
+        ("irm ", Severity.Medium, "downloads a file"),
         ("certutil -urlcache", Severity.Medium, "downloads a file via certutil"),
         ("bitsadmin /transfer", Severity.Medium, "downloads a file via bitsadmin"),
         ("curl ", Severity.Low, "downloads a file"),
@@ -458,6 +464,64 @@ public sealed class PowerShellHistoryModule : IScanModule
             }
         }
         await ctx.Log(Name, $"{lines.Length} history lines, {hits} of interest");
+        await ctx.ModuleDone(Name, 0);
+    }
+}
+
+/// <summary>PowerShell Script Block Logging (event 4104) — catches the same command
+/// patterns as <see cref="PowerShellHistoryModule"/>, but from commands that never touch
+/// PSReadLine's history file: hidden/non-interactive invocations
+/// (<c>powershell -WindowStyle Hidden -Command "irm ... | iex"</c>), scripts run via
+/// <c>-File</c>, or history that was cleared after the fact. Needs Script Block Logging
+/// enabled (Group Policy / registry) to have anything to read — degrades gracefully
+/// otherwise.</summary>
+public sealed class PowerShellEventLogModule : IScanModule
+{
+    public string Name => "powershell-eventlog";
+    public bool RequiresElevation => false;
+
+    public async Task RunAsync(ScanContext ctx, CancellationToken ct)
+    {
+        await ctx.ModuleStart(Name, 0);
+        try
+        {
+            var q = new System.Diagnostics.Eventing.Reader.EventLogQuery(
+                "Microsoft-Windows-PowerShell/Operational",
+                System.Diagnostics.Eventing.Reader.PathType.LogName,
+                "*[System[(EventID=4104)]]");
+            using var reader = new System.Diagnostics.Eventing.Reader.EventLogReader(q);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var n = 0; var hits = 0;
+            for (var e = reader.ReadEvent(); e is not null && n < 5000; e = reader.ReadEvent(), n++)
+            {
+                ct.ThrowIfCancellationRequested();
+                string desc;
+                try { desc = e.FormatDescription() ?? ""; } catch { continue; }
+                if (desc.Length == 0) continue;
+                var line = desc.ToLowerInvariant();
+                foreach (var (needle, sev, why) in PowerShellHistoryModule.Rules)
+                {
+                    if (!line.Contains(needle)) continue;
+                    var snippet = desc.Length > 300 ? desc[..300] : desc;
+                    if (!seen.Add(snippet)) break; // same script block logged more than once
+                    hits++;
+                    var s = Forensics.LooksLikeCheat(line) && sev < Severity.High ? Severity.High : sev;
+                    ctx.Add(new Finding(Name, s, "PowerShell script block of interest",
+                        $"A PowerShell Script Block Logging event (4104) {why}. This is captured even for hidden or "
+                        + "non-interactive invocations that never touch PSReadLine history.",
+                        new { time = e.TimeCreated, snippet }, e.TimeCreated, SortKey: 16));
+                    break;
+                }
+            }
+            await ctx.Log(Name, $"{n} script-block events, {hits} of interest");
+        }
+        catch (Exception ex)
+        {
+            ctx.Add(new Finding(Name, Severity.Info, "PowerShell script-block log not available",
+                "Could not read the Microsoft-Windows-PowerShell/Operational event log — Script Block Logging may "
+                + "not be enabled (Group Policy), or the log is inaccessible.",
+                new { error = ex.GetType().Name }, SortKey: 20));
+        }
         await ctx.ModuleDone(Name, 0);
     }
 }
