@@ -1,0 +1,36 @@
+name: Publish client build to R2
+
+# Rebuild the current client and push its split parts to Cloudflare R2,
+# using the existing R2_* repo secrets. Triggered manually from GitHub:
+#   Actions -> Publish client build to R2 -> Run workflow
+# After it finishes, the download link serves the refreshed build.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-upload:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "8.0.x" }
+
+      - name: Build + obfuscate + publish
+        shell: bash
+        run: bash scripts/build-client.sh
+
+      - name: Publish to Cloudflare R2
+        shell: bash
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+        run: |
+          npm ci
+          node scripts/split-upload.mjs client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe
