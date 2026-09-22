@@ -10,23 +10,17 @@ interface ReportRow {
 }
 
 
-/** The link staff hand out. It lives on a separate, bare host (the `error-pc-check`
- *  Railway service) whose `/` is a neutral page — the recipient never sees the
- *  staff panel. `/d/:key` there proxies to the download Edge Function.
- *  Override with VITE_DOWNLOAD_BASE; on localhost dev, fall back to the
- *  function URL directly. */
-const DOWNLOAD_BASE =
-  (import.meta.env.VITE_DOWNLOAD_BASE as string | undefined) ??
+/** The PowerShell bootstrap staff hand out. The person runs
+ *  `irm <this>/run?c=<key> | iex`, which downloads the client and starts it
+ *  with the key baked in. Lives on the separate, bare host (the
+ *  `error-pc-check` service) whose `/` is a neutral page — the recipient never
+ *  sees the staff panel. Override with VITE_RUN_BASE. */
+const RUN_BASE =
+  (import.meta.env.VITE_RUN_BASE as string | undefined) ??
   "https://error-pc-check-production.up.railway.app";
 
-function downloadUrl(key: string) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
-    const base = import.meta.env.VITE_SUPABASE_URL as string;
-    return `${base}/functions/v1/download?key=${encodeURIComponent(key)}`;
-  }
-  // Straight to the file — /d/<key> is proxied to the download Edge Function.
-  return `${DOWNLOAD_BASE}/d/${encodeURIComponent(key)}`;
+function runCommand(key: string) {
+  return `irm "${RUN_BASE}/run?c=${encodeURIComponent(key)}" | iex`;
 }
 
 export default function Dashboard() {
@@ -165,8 +159,6 @@ export default function Dashboard() {
       </div>
     );
 
-  const dl = issued ? downloadUrl(issued.key) : "";
-
   return (
     <div className="space-y-6">
       {/* context bar */}
@@ -188,7 +180,7 @@ export default function Dashboard() {
         )}
         {tenant && (
           <div className="flex gap-1.5 text-[11px] text-fg-dim">
-            <span className="chip border-ink-line">links expire in 2h</span>
+            <span className="chip border-ink-line">commands expire in 2h</span>
             <span className="chip border-ink-line">reports kept {tenant.retention_days}d</span>
           </div>
         )}
@@ -228,30 +220,29 @@ export default function Dashboard() {
           {issued && (
             <div className="mt-5 rounded-xl border border-brand/25 bg-brand/[0.06] p-4 shadow-glow">
               <p className="text-sm text-fg-mut">
-                Send this link to the person. It downloads <span className="text-fg">Error_PC_Check.exe</span>{" "}
-                — they just run it, the key rides along with the download. Works once · expires{" "}
+                Send this command to the person — they paste it into a{" "}
+                <span className="text-fg">Windows PowerShell</span> window. It downloads{" "}
+                <span className="text-fg">Error_PC_Check.exe</span> and runs it{" "}
+                automatically, the key rides along. Works once · expires{" "}
                 <span className="text-fg">{new Date(issued.expires_at).toLocaleTimeString()}</span>.
               </p>
 
               <div className="mt-3">
-                <label className="label">Download link</label>
+                <label className="label">PowerShell command</label>
                 <div className="mt-1 flex gap-2">
                   <input
                     readOnly
                     className="input flex-1 font-mono text-xs"
-                    value={dl}
+                    value={runCommand(issued.key)}
                     onFocus={(e) => e.currentTarget.select()}
                   />
                   <button
                     type="button"
                     className="btn px-3"
-                    onClick={() => navigator.clipboard?.writeText(dl)}
+                    onClick={() => navigator.clipboard?.writeText(runCommand(issued.key))}
                   >
                     Copy
                   </button>
-                  <a href={dl} className="btn px-3">
-                    Test
-                  </a>
                 </div>
               </div>
 

