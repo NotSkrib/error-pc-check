@@ -14,5 +14,6 @@ try {
 }
 Write-Output 'Starting Error PC Check...'
 Start-Process -FilePath $exe -ArgumentList '--key', '${key}'
+Write-Output 'Launched - the Error PC Check window should now be open. This PowerShell window can be closed.'
 `;
 }
