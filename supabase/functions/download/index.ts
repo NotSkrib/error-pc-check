@@ -77,11 +77,12 @@ Deno.serve(async (req) => {
   if (!man.ok) return page("Client unavailable", "<p>The client build is not published yet. Tell the staff member.</p>", 503);
   const manifest = JSON.parse(await man.text()) as { parts: string[]; bytes: number };
 
-  // Bake the key into the end of the file as a trailing overlay. The .NET
-  // single-file host ignores bytes past the bundle, so the exe still runs; the
-  // client reads its own tail to recover the key. This survives renaming,
-  // moving and "Unblock" — unlike the mark-of-the-web tag.
-  const footer = new TextEncoder().encode(`\nERRSMPKEY[${key}]ERRSMPKEY\n`);
+  // NOTE: do NOT append anything (e.g. a key overlay) to the end of the exe —
+  // the .NET single-file host reads its bundle footer from the very end of the
+  // file, so trailing bytes corrupt the bundle ("Failure processing application
+  // bundle"). The key reaches the client via the `--key` argument in the
+  // launcher script, or via the mark-of-the-web /d/<KEY>|?key=<KEY> URL for
+  // plain browser downloads.
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -91,7 +92,6 @@ Deno.serve(async (req) => {
           if (!dl.ok) throw new Error(`missing part ${part}`);
           controller.enqueue(new Uint8Array(await dl.arrayBuffer()));
         }
-        controller.enqueue(footer);
         controller.close();
       } catch (e) {
         controller.error(e);
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
   return new Response(stream, {
     headers: {
       "content-type": "application/octet-stream",
-      "content-length": String(manifest.bytes + footer.length),
+      "content-length": String(manifest.bytes),
       "content-disposition": `attachment; filename="Error_PC_Check.exe"`,
       "x-content-type-options": "nosniff",
       "cache-control": "no-store",
