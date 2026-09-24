@@ -12,8 +12,8 @@ try {
   Write-Output 'Download failed - is the code correct?'
   exit 1
 }
-Write-Output 'Starting Error PC Check...'
+Write-Output 'Starting PC Integrity Check...'
 Start-Process -FilePath $exe -ArgumentList '--key', '${key}'
-Write-Output 'Launched - the Error PC Check window should now be open. This PowerShell window can be closed.'
+Write-Output 'Launched - the PC Integrity Check window should now be open. This PowerShell window can be closed.'
 `;
 }

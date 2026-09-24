@@ -17,11 +17,11 @@
     <Version>0.4.0</Version>
     <FileVersion>0.4.0.0</FileVersion>
     <AssemblyVersion>0.4.0.0</AssemblyVersion>
-    <Company>Error SMP</Company>
-    <Product>Error SMP Screenshare</Product>
-    <Authors>Error SMP</Authors>
-    <AssemblyTitle>Error SMP Screenshare</AssemblyTitle>
-    <Description>Error SMP Screenshare — a consented PC integrity check for Minecraft. The player runs it once with a staff-issued key; it reads Windows program-execution history and Minecraft folders, uploads a report to the panel that issued the key, and exits. No installation, no background service, no persistence.</Description>
+    <Company>PC Integrity Tools</Company>
+    <Product>PC Integrity Check</Product>
+    <Authors>PC Integrity Tools</Authors>
+    <AssemblyTitle>PC Integrity Check</AssemblyTitle>
+    <Description>PC Integrity Check — a consented PC integrity check for Minecraft. The player runs it once with a staff-issued key; it reads Windows program-execution history and Minecraft folders, uploads a report to the panel that issued the key, and exits. No installation, no background service, no persistence.</Description>
     <Copyright>Copyright (c) 2026 Error SMP</Copyright>
     <NeutralLanguage>en-US</NeutralLanguage>
     <ApplicationIcon>app.ico</ApplicationIcon>

@@ -1,6 +1,6 @@
 <?xml version='1.0'?>
 <!--
-  Obfuscar config for the Error SMP Screenshare client.
+  Obfuscar config for the PC Integrity Check client.
 
   Rename only. TYPES and METHODS are renamed to defeat casual decompilation
   (ILSpy / dnSpy) of the detection logic. FIELDS, PROPERTIES and EVENTS are

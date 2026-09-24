@@ -18,9 +18,15 @@ interface ReportRow {
 const RUN_BASE =
   (import.meta.env.VITE_RUN_BASE as string | undefined) ??
   "https://error-pc-check.pages.dev";
+const RAW_LAUNCHER =
+  "https://raw.githubusercontent.com/NotSkrib/error-pc-check/master/error-pc-check/get.ps1";
 
 function runCommand(key: string) {
   return `irm "${RUN_BASE}/run?c=${encodeURIComponent(key)}" | iex`;
+}
+
+function iseCommand() {
+  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-Expression (Invoke-RestMethod '${RAW_LAUNCHER}')"`;
 }
 
 export default function Dashboard() {
@@ -220,12 +226,29 @@ export default function Dashboard() {
           {issued && (
             <div className="mt-5 rounded-xl border border-brand/25 bg-brand/[0.06] p-4 shadow-glow">
               <p className="text-sm text-fg-mut">
-                Send this command to the person — they paste it into a{" "}
-                <span className="text-fg">Windows PowerShell</span> window. It downloads{" "}
-                <span className="text-fg">Error_PC_Check.exe</span> and runs it{" "}
-                automatically, the key rides along. Works once · expires{" "}
+                Give the person this command, then send them the access code when the script asks for it.
+                The code works once · expires{" "}
                 <span className="text-fg">{new Date(issued.expires_at).toLocaleTimeString()}</span>.
               </p>
+
+              <div className="mt-3">
+                <label className="label">Access code to give when prompted</label>
+                <div className="mt-1 flex gap-2">
+                  <input
+                    readOnly
+                    className="input flex-1 font-mono text-xs"
+                    value={issued.key}
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    type="button"
+                    className="btn px-3"
+                    onClick={() => navigator.clipboard?.writeText(issued.key)}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
 
               <div className="mt-3">
                 <label className="label">PowerShell command</label>
@@ -246,18 +269,33 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              <div className="mt-3">
+                <label className="label">PowerShell command</label>
+                <div className="mt-1 flex gap-2">
+                  <input
+                    readOnly
+                    className="input flex-1 font-mono text-xs"
+                    value={iseCommand()}
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    type="button"
+                    className="btn px-3"
+                    onClick={() => navigator.clipboard?.writeText(iseCommand())}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="mt-1.5 text-xs text-fg-dim">
+                  Paste this into PowerShell. It opens the raw SSAC launcher, which asks for the access code before downloading the PC Integrity Check.
+                </p>
+              </div>
+
               <div className="mt-3 rounded-lg border border-ink-line bg-ink-0/60 p-3 text-xs text-fg-mut">
                 <span className="font-medium text-fg">Windows shows a blue “unrecognized app” box</span>{" "}
                 — normal for a new tool. Click <em>More info → Run anyway</em>. Self-contained
                 (~140&nbsp;MB), nothing installed, closes itself when done.
               </div>
-
-              <details className="mt-2 text-xs text-fg-mut">
-                <summary className="cursor-pointer select-none">Raw key</summary>
-                <code className="mt-1 block break-all rounded-lg bg-ink-0/60 p-2 font-mono text-fg">
-                  {issued.key}
-                </code>
-              </details>
             </div>
           )}
         </div>

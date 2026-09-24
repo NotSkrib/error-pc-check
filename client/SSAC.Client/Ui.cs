@@ -72,7 +72,7 @@ public sealed class SimpleForm : Form
 
     public SimpleForm(string serverName)
     {
-        Text = $"{serverName} Screenshare";
+        Text = $"{serverName} PC Integrity Check";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;

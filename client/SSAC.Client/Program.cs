@@ -174,11 +174,11 @@ internal static class Program
         if (opts is null)
         {
             var msg = args.Contains("--help") || args.Contains("-h") || args.Contains("/?")
-                ? "Error SMP Screenshare\n\nUsage: Error_PC_Check.exe [--key <KEY>] [--endpoint <URL>] [--pin <SPKI>]\n\n" +
+                ? "PC Integrity Check\n\nUsage: Error_PC_Check.exe [--key <KEY>] [--endpoint <URL>] [--pin <SPKI>]\n\n" +
                   "Normally you just double-click the file the staff member sent you."
-                : "Error SMP Screenshare\n\nThis file needs to be run straight from the download link a staff member " +
+                : "PC Integrity Check\n\nThis file needs to be run straight from the download link a staff member " +
                   "sent you. Re-download it from that link and run it again — don't move or rename it first.";
-            MessageBox.Show(msg, "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(msg, "PC Integrity Check", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
@@ -229,8 +229,8 @@ internal static class Program
         try
         {
             MessageBox.Show(
-                $"The screenshare tool hit an unexpected error and has to close.\n\n{ex?.GetType().Name}: {ex?.Message}",
-                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                $"The PC integrity check hit an unexpected error and has to close.\n\n{ex?.GetType().Name}: {ex?.Message}",
+                "PC Integrity Check", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         catch { /* nothing more we can do */ }
     }
@@ -406,7 +406,7 @@ internal sealed class FlowContext : ApplicationContext
             MessageBox.Show(
                 ex is IngestException ? ex.Message
                     : $"Couldn't reach the panel. Check your internet connection and try again.\n\n{ex.Message}",
-                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "PC Integrity Check", MessageBoxButtons.OK, MessageBoxIcon.Error);
             ExitThread();
             return;
         }
@@ -414,7 +414,7 @@ internal sealed class FlowContext : ApplicationContext
         if (desc.AlreadyUsed)
         {
             MessageBox.Show("This screenshare link has already been used. Ask the staff member for a new one.",
-                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                "PC Integrity Check", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             ExitThread();
             return;
         }
@@ -448,7 +448,7 @@ internal sealed class FlowContext : ApplicationContext
             MessageBox.Show(
                 ex is IngestException ? ex.Message
                     : "Couldn't reach the panel. Check your internet connection and try again.",
-                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "PC Integrity Check", MessageBoxButtons.OK, MessageBoxIcon.Error);
             ui.Finish(Severity.Info, 0, uploaded: false);
             return;
         }
