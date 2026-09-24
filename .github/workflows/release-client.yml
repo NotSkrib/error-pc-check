@@ -68,7 +68,6 @@ jobs:
           sha256sum out/Error_PC_Check.exe
 
       - name: Publish signed build to Cloudflare R2
-        if: ${{ secrets.R2_ACCESS_KEY_ID != '' }}
         shell: bash
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -76,6 +75,10 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ vars.R2_BUCKET }}
         run: |
+          if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_ACCOUNT_ID" ] || [ -z "$R2_BUCKET" ]; then
+            echo "R2 credentials are not configured; skipping R2 publication."
+            exit 0
+          fi
           npm ci
           node scripts/split-upload.mjs signed/ssac-screenshare.exe
 
