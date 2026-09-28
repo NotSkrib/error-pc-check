@@ -4,7 +4,7 @@
 automation, no `SendInput`, no screen capture, no process/memory access and no
 game interaction of any kind. It exists only to carry the same *fingerprints* a
 real external macro (e.g. `zenithmacros.store`) leaves on a PC, so the
-screenshare client's `external-macro` module (`client/SSAC.Client/ExternalMacroModule.cs`)
+screenshare client's `external-macro` module (`client/ErrorSmp.Client/ExternalMacroModule.cs`)
 can be exercised:
 
 - a window titled **"Zenith Macros"**
@@ -24,7 +24,7 @@ printf '; test\n' > "$USERPROFILE/Downloads/crystal-macro.ahk"
 "$USERPROFILE/Downloads/SystemHelper.exe" &
 
 # then run a scan (or --selftest) and check the external-macro findings
-dotnet client/SSAC.Client/bin/Release/net8.0-windows/win-x64/ssac-screenshare.dll --selftest
+dotnet client/ErrorSmp.Client/bin/Release/net8.0-windows/win-x64/error-pc-check.dll --selftest
 
 # cleanup
 taskkill /IM SystemHelper.exe /F

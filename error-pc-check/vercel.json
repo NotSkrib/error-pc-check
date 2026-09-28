@@ -8,6 +8,7 @@
       "source": "/d/:key",
       "destination": "https://ugxzpmsotzfhoqraohvv.supabase.co/functions/v1/download?key=:key"
     },
+    { "source": "/run", "destination": "/api/run" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

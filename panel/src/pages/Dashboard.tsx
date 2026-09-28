@@ -159,7 +159,7 @@ export default function Dashboard() {
       <div className="card mx-auto max-w-md p-6">
         <h2 className="text-base font-semibold">No access yet</h2>
         <p className="mt-1.5 text-sm text-fg-mut">
-          This account isn't attached to Error SMP. Ask an admin to add you.
+          This account isn't attached to Error SMP Screenshare. Ask an admin to add you.
         </p>
         {err && <p className="mt-3 text-sm text-brand">{err}</p>}
       </div>
@@ -195,7 +195,7 @@ export default function Dashboard() {
       {/* new key */}
       <section className="card overflow-hidden">
         <div className="border-b border-ink-line px-5 py-3">
-          <h2 className="text-sm font-semibold">New screenshare</h2>
+          <h2 className="text-sm font-semibold">New session</h2>
         </div>
         <div className="p-5">
           <form onSubmit={generateKey} className="flex flex-wrap items-end gap-3">
@@ -287,7 +287,7 @@ export default function Dashboard() {
                   </button>
                 </div>
                 <p className="mt-1.5 text-xs text-fg-dim">
-                  Paste this into PowerShell. It opens the raw SSAC launcher, which asks for the access code before downloading the PC Integrity Check.
+                  Paste this into PowerShell. It opens the raw Error SMP Screenshare launcher, which asks for the access code before downloading the tool.
                 </p>
               </div>
 

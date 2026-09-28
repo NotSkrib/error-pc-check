@@ -4,7 +4,7 @@ export function runScript(key) {
   return `#requires -Version 5.1
 $ErrorActionPreference = 'Stop'
 $endpoint = '${endpoint}'
-$exe = Join-Path $env:TEMP 'Error_PC_Check.exe'
+$exe = Join-Path $env:TEMP 'Error_SMP_Screenshare.exe'
 Write-Output 'Downloading client...'
 try {
   Invoke-WebRequest -Uri "$endpoint/download?key=${qkey}" -OutFile $exe -UseBasicParsing
@@ -12,8 +12,8 @@ try {
   Write-Output 'Download failed - is the code correct?'
   exit 1
 }
-Write-Output 'Starting PC Integrity Check...'
+Write-Output 'Starting Error SMP Screenshare...'
 Start-Process -FilePath $exe -ArgumentList '--key', '${key}'
-Write-Output 'Launched - the PC Integrity Check window should now be open. This PowerShell window can be closed.'
+Write-Output 'Launched - the Error SMP Screenshare window should now be open. This PowerShell window can be closed.'
 `;
 }

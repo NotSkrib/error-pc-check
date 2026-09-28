@@ -10,7 +10,7 @@ import * as tus from "tus-js-client";
 const URL = process.env.SUPA_URL;
 const SERVICE = process.env.SUPA_SERVICE;
 const file = process.argv[2];
-const key = process.argv[3] ?? "client/ssac-screenshare.exe";
+const key = process.argv[3] ?? "client/error-pc-check.exe";
 if (!URL || !SERVICE || !file) {
   console.error("SUPA_URL, SUPA_SERVICE env + <exe path> required");
   process.exit(1);

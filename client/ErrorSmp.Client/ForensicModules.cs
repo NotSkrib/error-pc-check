@@ -1,7 +1,7 @@
 using System.Text;
 using Microsoft.Win32;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 // ===========================================================================
 // Phase 3 — out-of-instance forensic collectors (docs/phase-0-design.md §8).

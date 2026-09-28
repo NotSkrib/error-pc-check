@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 /// <summary>
 /// General (non-Minecraft) cheat indicators: cheat/injection tooling on disk or

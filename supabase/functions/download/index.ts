@@ -1,11 +1,11 @@
-// SSAC client download.
+// Error SMP Screenshare client download.
 //
 //   GET /download?key=<session key>
 //
 // Validates the one-time key (via Supabase Postgres — cheap, low-egress),
 // then streams the self-contained client binary (stored in <=30 MB parts,
 // kept in Cloudflare R2 so serving it costs no egress) reassembled, named
-// plainly Error_PC_Check.exe. The key is not in the file name; the client
+// plainly Error_SMP_Screenshare.exe. The key is not in the file name; the client
 // recovers it from the download's Zone.Identifier (mark-of-the-web) URL, or
 // prompts. No key -> friendly HTML page.
 
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const key = (url.searchParams.get("key") ?? "").trim();
   if (!key) {
-    return page("SSAC Screenshare Tool", "<p>This link is missing its key. Ask the staff member for the download link again.</p>", 400);
+    return page("Error SMP Screenshare", "<p>This link is missing its key. Ask the staff member for the download link again.</p>", 400);
   }
 
   const { data: session } = await admin
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     headers: {
       "content-type": "application/octet-stream",
       "content-length": String(manifest.bytes),
-      "content-disposition": `attachment; filename="Error_PC_Check.exe"`,
+      "content-disposition": `attachment; filename="Error_SMP_Screenshare.exe"`,
       "x-content-type-options": "nosniff",
       "cache-control": "no-store",
       "x-ssac-server": server,

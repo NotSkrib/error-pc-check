@@ -39,14 +39,14 @@ jobs:
           dotnet tool restore
           bash scripts/build-client.sh
           mkdir dist
-          cp client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe dist/ssac-screenshare.exe
+          cp client/ErrorSmp.Client/bin/Release/net8.0-windows/win-x64/publish/error-pc-check.exe dist/error-pc-check.exe
 
       - name: Upload unsigned artifact
         id: unsigned
         uses: actions/upload-artifact@v4
         with:
           name: unsigned
-          path: dist/ssac-screenshare.exe
+          path: dist/error-pc-check.exe
 
       - name: Submit to SignPath for signing
         id: sign
@@ -64,8 +64,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p out
-          cp signed/ssac-screenshare.exe out/Error_PC_Check.exe
-          sha256sum out/Error_PC_Check.exe
+          cp signed/error-pc-check.exe out/Error_SMP_Screenshare.exe
+          sha256sum out/Error_SMP_Screenshare.exe
 
       - name: Publish signed build to Cloudflare R2
         shell: bash
@@ -80,9 +80,9 @@ jobs:
             exit 0
           fi
           npm ci
-          node scripts/split-upload.mjs signed/ssac-screenshare.exe
+          node scripts/split-upload.mjs signed/error-pc-check.exe
 
       - name: Attach signed exe to the Release
         uses: softprops/action-gh-release@v2
         with:
-          files: out/Error_PC_Check.exe
+          files: out/Error_SMP_Screenshare.exe

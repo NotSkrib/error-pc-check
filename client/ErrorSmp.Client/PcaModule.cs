@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 /// <summary>
 /// Program Compatibility Assistant history (Windows 10 20H2+ / Windows 11).

@@ -21,7 +21,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           <Link to="/" className="group flex items-center gap-2.5">
             <span className="brandmark">E</span>
             <span className="text-[15px] font-semibold tracking-tight text-fg">
-              Error&nbsp;SMP <span className="font-normal text-fg-dim">/ Screenshare</span>
+              PC&nbsp;Integrity <span className="font-normal text-fg-dim">/ Staff Console</span>
             </span>
             <span className="chip border-ink-line2 text-fg-mut">{PANEL_VERSION}</span>
           </Link>

@@ -7,8 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>latest</LangVersion>
-    <AssemblyName>ssac-screenshare</AssemblyName>
-    <RootNamespace>SSAC.Client</RootNamespace>
+    <AssemblyName>error-pc-check</AssemblyName>
+    <RootNamespace>ErrorSmp.Client</RootNamespace>
 
     <!-- Version + publisher metadata: shows real info in the file's Properties
          and (once code-signed) in the SmartScreen / UAC publisher line.
@@ -17,11 +17,11 @@
     <Version>0.4.0</Version>
     <FileVersion>0.4.0.0</FileVersion>
     <AssemblyVersion>0.4.0.0</AssemblyVersion>
-    <Company>PC Integrity Tools</Company>
-    <Product>PC Integrity Check</Product>
-    <Authors>PC Integrity Tools</Authors>
-    <AssemblyTitle>PC Integrity Check</AssemblyTitle>
-    <Description>PC Integrity Check — a consented PC integrity check for Minecraft. The player runs it once with a staff-issued key; it reads Windows program-execution history and Minecraft folders, uploads a report to the panel that issued the key, and exits. No installation, no background service, no persistence.</Description>
+    <Company>Error SMP</Company>
+    <Product>Error SMP Screenshare</Product>
+    <Authors>Error SMP</Authors>
+    <AssemblyTitle>Error SMP Screenshare</AssemblyTitle>
+    <Description>Error SMP Screenshare — a consented PC health and integrity check. The user runs it once with a staff-issued key; it reads Windows program-execution history and relevant application folders, uploads a report to the console that issued the key, and exits. No installation, no background service, no persistence.</Description>
     <Copyright>Copyright (c) 2026 Error SMP</Copyright>
     <NeutralLanguage>en-US</NeutralLanguage>
     <ApplicationIcon>app.ico</ApplicationIcon>
@@ -42,7 +42,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\..\signatures\ssac-signatures.json" LogicalName="ssac-signatures.json" />
+    <EmbeddedResource Include="..\..\signatures\errorsmp-signatures.json" LogicalName="errorsmp-signatures.json" />
   </ItemGroup>
 
 </Project>

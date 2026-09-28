@@ -30,7 +30,7 @@ export default function Login() {
           <span className="brandmark h-7 w-7 text-sm">E</span>
           <div className="leading-tight">
             <div className="text-[15px] font-semibold tracking-tight">Error SMP</div>
-            <div className="text-xs text-fg-dim">Screenshare console</div>
+            <div className="text-xs text-fg-dim">Staff console</div>
           </div>
         </div>
 

@@ -52,7 +52,7 @@ git tag v0.4.1 && git push origin v0.4.1
 ```
 
 `.github/workflows/release-client.yml` builds -> obfuscates -> publishes the
-single-file exe -> SignPath signs it -> attaches `Error_PC_Check.exe` to a GitHub
+single-file exe -> SignPath signs it -> attaches `Error_SMP_Screenshare.exe` to a GitHub
 Release. If the two optional Supabase secrets are set it also re-splits the
 **signed** exe and uploads the parts, so the live download link immediately
 serves the signed build.

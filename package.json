@@ -1,5 +1,5 @@
 {
-  "name": "ssac-scripts",
+  "name": "errorsmp-scripts",
   "version": "0.0.0",
   "private": true,
   "description": "Repo-root tooling deps for scripts/ (e2e checks). App code lives in panel/, client/, supabase/.",

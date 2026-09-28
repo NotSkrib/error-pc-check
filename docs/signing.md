@@ -6,7 +6,7 @@ any executable downloaded from the internet whose publisher it doesn't recognise
 carry a valid Authenticode signature from a CA that SmartScreen trusts.
 
 The client is already sign-ready: it has an icon, a manifest, version + publisher
-metadata (`SSAC.Client.csproj`). All that's missing is the signature.
+metadata (`ErrorSmp.Client.csproj`). All that's missing is the signature.
 
 ## Which certificate
 
@@ -30,16 +30,16 @@ After `dotnet publish` (see `docs/deploy.md`), before splitting/uploading:
 ```powershell
 # EV / OV cert in the Windows cert store or on a token:
 signtool sign /fd SHA256 /tr http://timestamp.sectigo.com /td SHA256 /a `
-  client\SSAC.Client\bin\Release\net8.0-windows\win-x64\publish\ssac-screenshare.exe
+  client\ErrorSmp.Client\bin\Release\net8.0-windows\win-x64\publish\error-pc-check.exe
 
 # Azure Trusted Signing (azuresigntool + the ATS dlib):
 azuresigntool sign -kvu <vault-url> -kvc <cert-name> `
   -kvt <tenant> -kvi <client-id> -kvs <secret> `
   -tr http://timestamp.acs.microsoft.com -td SHA256 `
-  client\...\publish\ssac-screenshare.exe
+  client\...\publish\error-pc-check.exe
 
 # verify
-signtool verify /pa /v client\...\publish\ssac-screenshare.exe
+signtool verify /pa /v client\...\publish\error-pc-check.exe
 ```
 
 Then run the split + upload steps from `docs/deploy.md` on the **signed** exe and

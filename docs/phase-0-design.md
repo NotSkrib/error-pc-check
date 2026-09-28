@@ -6,7 +6,7 @@ Status: **draft**. This document is the reference for Phases 1–6. No code depe
 
 ## 1. Product summary
 
-SSAC is a forensic scanner a Minecraft server's staff run against a **consenting** suspect's Windows PC to find evidence of cheat use. It is **not** a real-time anti-cheat. It produces evidence + severity, and a human decides.
+Error SMP Screenshare is a forensic scanner a Minecraft server's staff run against a **consenting** suspect's Windows PC to find evidence of cheat use. It is **not** a real-time anti-cheat. It produces evidence + severity, and a human decides.
 
 ### Actors
 
@@ -16,7 +16,7 @@ SSAC is a forensic scanner a Minecraft server's staff run against a **consenting
 | Admin | Manages checkers, views all reports | Tenant admin |
 | Checker | Generates keys, runs screenshares, views own reports | Scoped |
 | Suspect | Runs the client agent on their PC, gives consent | Untrusted; controls the machine being scanned |
-| SSAC backend | Supabase project (Postgres + Auth + Realtime + Storage) | Trusted service |
+| Error SMP Screenshare backend | Supabase project (Postgres + Auth + Realtime + Storage) | Trusted service |
 
 ### Non-goals (v1)
 
@@ -90,7 +90,7 @@ Every finding carries exactly one severity. The report verdict is the **highest*
 Rules:
 - A collector that could not run (missing privilege, artifact absent) emits an `info` finding `module_unavailable` — never silently skipped.
 - Correlation findings (T7) may be `critical` even when each individual artifact is only `low`.
-- The report header always shows: **"Findings are evidence, not a verdict. A human must review. SSAC does not recommend or apply punishment."**
+- The report header always shows: **"Findings are evidence, not a verdict. A human must review. Error SMP Screenshare does not recommend or apply punishment."**
 
 ---
 
@@ -139,7 +139,7 @@ The client may read **only** the following. Anything not listed requires a desig
 
 ## 5. Consent screen copy (client agent)
 
-> **SSAC Screenshare Tool — <SERVER NAME>**
+> **Error SMP Screenshare — <SERVER NAME>**
 >
 > A staff member of **<SERVER NAME>** has asked you to run a screenshare check. This tool looks for evidence of Minecraft cheating on this PC and sends a report to that server's panel.
 >

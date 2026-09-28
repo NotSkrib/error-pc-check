@@ -1,6 +1,6 @@
 using Microsoft.Data.Sqlite;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 /// <summary>
 /// Reads the browser download history (the `downloads` table only — never

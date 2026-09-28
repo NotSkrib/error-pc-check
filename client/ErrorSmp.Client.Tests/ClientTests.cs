@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
-using SSAC.Client;
+using ErrorSmp.Client;
 using Xunit;
 
-namespace SSAC.Client.Tests;
+namespace ErrorSmp.Client.Tests;
 
 public class OptionsTests
 {

@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 /// <summary>
 /// NTFS USN change journal reader (docs/phase-0-design.md §8, T7 headline source).

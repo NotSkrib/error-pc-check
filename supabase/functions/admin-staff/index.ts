@@ -1,4 +1,4 @@
-// SSAC admin-staff Edge Function
+// Error SMP Screenshare admin-staff Edge Function
 //
 // Owner/admin-only staff account management for the panel: list, create,
 // reset password, remove. Runs with the service-role key (auth.admin.* isn't

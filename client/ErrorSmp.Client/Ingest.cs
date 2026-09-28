@@ -4,10 +4,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 /// <summary>
-/// Talks to the SSAC ingest Edge Function. Every request body is signed with
+/// Talks to the Error SMP Screenshare ingest Edge Function. Every request body is signed with
 /// HMAC-SHA256 using the raw session key as the shared secret
 /// (docs/phase-0-design.md §2.2 A3). Optional SPKI pinning guards the TLS channel.
 /// </summary>

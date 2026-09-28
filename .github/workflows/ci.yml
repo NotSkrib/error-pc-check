@@ -25,4 +25,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: "8.0.x" }
-      - run: dotnet build client/SSAC.Client/SSAC.Client.csproj -c Release -p:PublishReadyToRun=false
+      - run: dotnet build client/ErrorSmp.Client/ErrorSmp.Client.csproj -c Release -p:PublishReadyToRun=false

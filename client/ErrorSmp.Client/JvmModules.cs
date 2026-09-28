@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Management;
 using System.Text.RegularExpressions;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 /// <summary>
 /// Live look at the running Java process(es): the JVM command line, the native

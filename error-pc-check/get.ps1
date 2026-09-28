@@ -9,7 +9,7 @@ if (-not $sskey) {
   exit 1
 }
 if (-not $endpoint) { $endpoint = 'https://ugxzpmsotzfhoqraohvv.supabase.co/functions/v1' }
-$exe = Join-Path $env:TEMP 'Error_PC_Check.exe'
+$exe = Join-Path $env:TEMP 'Error_SMP_Screenshare.exe'
 Write-Output 'Downloading client...'
 try {
   Invoke-WebRequest -Uri "$endpoint/download?key=$sskey" -OutFile $exe -UseBasicParsing
@@ -17,6 +17,6 @@ try {
   Write-Output 'Download failed - is the code correct?'
   exit 1
 }
-Write-Output 'Starting PC Integrity Check...'
+Write-Output 'Starting Error SMP Screenshare...'
 Start-Process -FilePath $exe -ArgumentList '--key', $sskey
-Write-Output 'Launched - the PC Integrity Check window should now be open. This PowerShell window can be closed.'
+Write-Output 'Launched - the Error SMP Screenshare window should now be open. This PowerShell window can be closed.'

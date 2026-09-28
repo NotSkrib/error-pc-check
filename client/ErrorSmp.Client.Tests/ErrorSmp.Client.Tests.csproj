@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SSAC.Client\SSAC.Client.csproj" />
+    <ProjectReference Include="..\ErrorSmp.Client\ErrorSmp.Client.csproj" />
   </ItemGroup>
 
 </Project>

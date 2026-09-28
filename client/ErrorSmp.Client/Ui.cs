@@ -2,7 +2,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 /// <summary>Recorded consent (docs/phase-0-design.md §5). The simple flow records it automatically.</summary>
 public readonly record struct ConsentResult(bool Accepted, DateTimeOffset At, bool BrowserHistoryOptIn);
@@ -72,7 +72,7 @@ public sealed class SimpleForm : Form
 
     public SimpleForm(string serverName)
     {
-        Text = $"{serverName} PC Integrity Check";
+        Text = $"{serverName} Screenshare";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;

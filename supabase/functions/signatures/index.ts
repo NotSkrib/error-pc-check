@@ -1,12 +1,14 @@
-// SSAC public signature-DB endpoint.
+// Error SMP Screenshare public signature-DB endpoint.
 //
 // The client agent GETs this at scan start and uses whichever of
 // (embedded seed, this response) has the higher `version` string
 // (docs/phase-0-design.md §7). No auth — the DB contains only public
 // cheat names / package ids / log-banner regexes.
 //
-// Publish flow: upload signatures/ssac-signatures.json to the Storage
-// bucket `ssac-assets` at key `signatures/ssac-signatures.json`.
+// Publish flow: upload the repo's signatures/errorsmp-signatures.json to the
+// Storage bucket `ssac-assets` at key `signatures/ssac-signatures.json`
+// (the storage key predates the rebrand and is deliberately left as-is —
+// objects already exist there and in-flight clients read this exact key).
 // If Storage is unreachable this returns an empty DB so the client
 // falls back to its embedded copy.
 

@@ -33,4 +33,4 @@ jobs:
           R2_BUCKET: ${{ vars.R2_BUCKET }}
         run: |
           npm ci
-          node scripts/split-upload.mjs client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe
+          node scripts/split-upload.mjs client/ErrorSmp.Client/bin/Release/net8.0-windows/win-x64/publish/error-pc-check.exe

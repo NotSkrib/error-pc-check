@@ -1,4 +1,4 @@
-// SSAC ingest Edge Function
+// Error SMP Screenshare ingest Edge Function
 //
 // The client agent authenticates with its one-time session key (raw token) and
 // signs every request body with HMAC-SHA256 using that same token as the shared

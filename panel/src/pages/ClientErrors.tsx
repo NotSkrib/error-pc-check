@@ -34,7 +34,7 @@ export default function ClientErrors() {
         <span className="chip border-ink-line text-fg-dim">{rows.length}</span>
       </div>
       <p className="text-sm text-fg-mut">
-        Unhandled exceptions the screenshare client posted home. Nothing here is good —
+        Unhandled exceptions the Error SMP Screenshare client posted home. Nothing here is good —
         an empty list is the goal.
       </p>
 

@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Principal;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 public enum Severity { Clean, Info, Low, Medium, High, Critical }
 

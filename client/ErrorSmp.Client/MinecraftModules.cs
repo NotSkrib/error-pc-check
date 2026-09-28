@@ -2,7 +2,7 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 /// <summary>Finds Minecraft instance folders across the common launchers (docs/phase-0-design.md §4.1).</summary>
 public static class MinecraftLocator

@@ -32,3 +32,7 @@ seed.out.json
 seed.err.log
 last_sid.txt
 scripts/.client-url
+
+# generated promo-video artifacts (/brag output) - rebuildable, and the asset
+# filenames embed local machine paths, so they must never be committed
+brag-output/

@@ -1,4 +1,4 @@
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 /// <summary>
 /// Best-effort crash reporting to the panel's `client-error` Edge Function — a

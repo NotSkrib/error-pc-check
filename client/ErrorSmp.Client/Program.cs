@@ -1,6 +1,6 @@
 using System.Windows.Forms;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 public static class AppInfo
 {
@@ -88,8 +88,8 @@ public sealed record Options(string Key, string Endpoint, string? Pin, bool Auto
     }
 
     /// <summary>
-    /// The shipped file is just `Error_PC_Check.exe`, but if someone kept (or a
-    /// tester used) a keyed name like `errorsmp-&lt;KEY&gt;.exe` /
+    /// The shipped file is just `Error_SMP_Screenshare.exe`, but if someone kept
+    /// (or a tester used) a keyed name like `errorsmp-&lt;KEY&gt;.exe` /
     /// `ssac-screenshare-&lt;KEY&gt;.exe`, pull the key out of it.
     /// </summary>
     private static string? KeyFromOwnFilename()
@@ -110,7 +110,7 @@ public sealed record Options(string Key, string Endpoint, string? Pin, bool Auto
     /// data stream that records the URL it came from (`HostUrl` / `ReferrerUrl`).
     /// The panel link is `.../d/&lt;KEY&gt;` (or `?key=&lt;KEY&gt;`), so we can
     /// recover the key from that even though the file itself is just
-    /// `Error_PC_Check.exe`. This is the normal path for a browser download.
+    /// `Error_SMP_Screenshare.exe`. This is the normal path for a browser download.
     /// </summary>
     private static string? KeyFromMarkOfTheWeb()
     {
@@ -174,11 +174,11 @@ internal static class Program
         if (opts is null)
         {
             var msg = args.Contains("--help") || args.Contains("-h") || args.Contains("/?")
-                ? "PC Integrity Check\n\nUsage: Error_PC_Check.exe [--key <KEY>] [--endpoint <URL>] [--pin <SPKI>]\n\n" +
+                ? "Error SMP Screenshare\n\nUsage: Error_SMP_Screenshare.exe [--key <KEY>] [--endpoint <URL>] [--pin <SPKI>]\n\n" +
                   "Normally you just double-click the file the staff member sent you."
-                : "PC Integrity Check\n\nThis file needs to be run straight from the download link a staff member " +
+                : "Error SMP Screenshare\n\nThis file needs to be run straight from the download link a staff member " +
                   "sent you. Re-download it from that link and run it again — don't move or rename it first.";
-            MessageBox.Show(msg, "PC Integrity Check", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(msg, "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
@@ -196,8 +196,19 @@ internal static class Program
     {
         try
         {
-            foreach (var d in Directory.EnumerateDirectories(Path.GetTempPath(), "ssac-*"))
-                try { Directory.Delete(d, true); } catch { /* best effort */ }
+            // Sweeps leftovers from older builds. `ssac-*` is the legacy prefix
+            // (still in the wild); `errorsmp-*` covers the current one. Each
+            // pattern is guarded separately: EnumerateDirectories is lazy and
+            // can throw mid-iteration, and one bad sweep must not skip the other.
+            foreach (var pattern in new[] { "ssac-*", "errorsmp-*" })
+            {
+                try
+                {
+                    foreach (var d in Directory.EnumerateDirectories(Path.GetTempPath(), pattern))
+                        try { Directory.Delete(d, true); } catch { /* best effort */ }
+                }
+                catch { /* ignore */ }
+            }
         }
         catch { /* ignore */ }
     }
@@ -229,8 +240,8 @@ internal static class Program
         try
         {
             MessageBox.Show(
-                $"The PC integrity check hit an unexpected error and has to close.\n\n{ex?.GetType().Name}: {ex?.Message}",
-                "PC Integrity Check", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                $"The screenshare tool hit an unexpected error and has to close.\n\n{ex?.GetType().Name}: {ex?.Message}",
+                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         catch { /* nothing more we can do */ }
     }
@@ -268,7 +279,7 @@ internal static class SelfTest
             new CorrelationModule(),
         ];
 
-        Console.WriteLine($"SSAC client {AppInfo.Version} — selftest "
+        Console.WriteLine($"Error SMP Screenshare {AppInfo.Version} — selftest "
             + $"(elevated={EnvironmentModule.IsElevated()}, sigdb {sigDb.Version} / {sigDb.Signatures.Count} sigs)\n");
         foreach (var m in modules)
         {
@@ -406,7 +417,7 @@ internal sealed class FlowContext : ApplicationContext
             MessageBox.Show(
                 ex is IngestException ? ex.Message
                     : $"Couldn't reach the panel. Check your internet connection and try again.\n\n{ex.Message}",
-                "PC Integrity Check", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
             ExitThread();
             return;
         }
@@ -414,7 +425,7 @@ internal sealed class FlowContext : ApplicationContext
         if (desc.AlreadyUsed)
         {
             MessageBox.Show("This screenshare link has already been used. Ask the staff member for a new one.",
-                "PC Integrity Check", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             ExitThread();
             return;
         }
@@ -448,7 +459,7 @@ internal sealed class FlowContext : ApplicationContext
             MessageBox.Show(
                 ex is IngestException ? ex.Message
                     : "Couldn't reach the panel. Check your internet connection and try again.",
-                "PC Integrity Check", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
             ui.Finish(Severity.Info, 0, uploaded: false);
             return;
         }

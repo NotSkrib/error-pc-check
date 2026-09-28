@@ -29,8 +29,10 @@ curl -X POST "$SUPA_URL/storage/v1/bucket" \
   -d '{"id":"ssac-assets","name":"ssac-assets","public":true}'
 ```
 
-Upload the **signature DB** — `signatures/ssac-signatures.json` → key
-`signatures/ssac-signatures.json` (POST to
+Upload the **signature DB** — the repo's
+`signatures/errorsmp-signatures.json` → storage key
+`signatures/ssac-signatures.json` (the key predates the rebrand and is kept
+as-is, so existing objects and in-flight clients keep resolving it; POST to
 `$SUPA_URL/storage/v1/object/ssac-assets/signatures/ssac-signatures.json`).
 If missing, the `signatures` function returns an empty DB and the client uses
 its embedded copy.
@@ -60,14 +62,14 @@ to keep individual PUTs small:
 
 ```bash
 ./scripts/build-client.sh
-# = dotnet build  ->  obfuscar (rename-only, client/SSAC.Client/obfuscar.xml)
+# = dotnet build  ->  obfuscar (rename-only, client/ErrorSmp.Client/obfuscar.xml)
 #   ->  dotnet publish --no-build   (bundles the obfuscated assembly)
 # ~145 MB. Do NOT add -p:EnableCompressionInSingleFile — a compressed
 # single-file bundle reads as "packed" to AV heuristics and picks up
 # false positives on VirusTotal. Obfuscar is rename-only (no string
 # encryption, no packing) for the same reason.
 R2_ACCOUNT_ID=<id> R2_ACCESS_KEY_ID=<key id> R2_SECRET_ACCESS_KEY=<secret> \
-  node scripts/split-upload.mjs client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe
+  node scripts/split-upload.mjs client/ErrorSmp.Client/bin/Release/net8.0-windows/win-x64/publish/error-pc-check.exe
 # writes client/parts/part00..partNN + client/parts/manifest.json to R2
 ```
 
@@ -77,7 +79,7 @@ once the `R2_*` GitHub secrets are set.
 ### The download link
 
 The `download` Edge Function validates the key, reads `parts/manifest.json`, and
-streams the parts reassembled as a plain `Error_PC_Check.exe` (no key in the name).
+streams the parts reassembled as a plain `Error_SMP_Screenshare.exe` (no key in the name).
 
 The link staff hand out lives on a **separate** Vercel project, `error-pc-check/`
 (→ `https://error-pc-check.vercel.app`), whose `/` is a neutral static page —
@@ -118,10 +120,11 @@ Email → Confirm email** off in the dashboard.
 ## Client
 
 ```bash
-dotnet publish client/SSAC.Client/SSAC.Client.csproj -c Release
-# -> client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe
+dotnet publish client/ErrorSmp.Client/ErrorSmp.Client.csproj -c Release
+# -> client/ErrorSmp.Client/bin/Release/net8.0-windows/win-x64/publish/error-pc-check.exe
+#    (downloaded to the player as Error_SMP_Screenshare.exe)
 
-ssac-screenshare --key <KEY> --endpoint https://<ref>.supabase.co/functions/v1
+Error_SMP_Screenshare.exe --key <KEY> --endpoint https://<ref>.supabase.co/functions/v1
 ```
 
 `--auto` runs it headless (no consent window; consent recorded as accepted +
@@ -134,7 +137,7 @@ headless) for E2E/CI. `--selftest` runs every module locally with no network.
 
 ```bash
 node scripts/e2e.mjs seed                   # -> JSON: { key, session_id, ... }
-ssac-screenshare --auto --key <KEY> --endpoint https://<ref>.supabase.co/functions/v1
+Error_SMP_Screenshare.exe --auto --key <KEY> --endpoint https://<ref>.supabase.co/functions/v1
 node scripts/e2e.mjs report <session_id>    # -> stored report + findings
 ```
 

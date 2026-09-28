@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 // Known-cheat signature DB + matcher (docs/phase-0-design.md §7).
 // The client carries an embedded seed and, at scan start, tries to fetch a
@@ -54,8 +54,8 @@ public sealed class SignatureDb
 
     public static SignatureDb Embedded()
     {
-        using var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("ssac-signatures.json")
-            ?? throw new InvalidOperationException("embedded ssac-signatures.json missing");
+        using var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("errorsmp-signatures.json")
+            ?? throw new InvalidOperationException("embedded errorsmp-signatures.json missing");
         using var r = new StreamReader(s);
         return Parse(r.ReadToEnd());
     }

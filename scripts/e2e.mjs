@@ -1,4 +1,4 @@
-// SSAC end-to-end check against a live Supabase project.
+// Error SMP Screenshare end-to-end check against a live Supabase project.
 //
 //   node scripts/e2e.mjs seed     -> creates a confirmed user + tenant + one-time key, prints KEY / SESSION
 //   node scripts/e2e.mjs report <sessionId>  -> prints the stored report + findings

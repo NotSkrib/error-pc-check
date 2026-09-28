@@ -1,6 +1,6 @@
 <?xml version='1.0'?>
 <!--
-  Obfuscar config for the PC Integrity Check client.
+  Obfuscar config for the Error SMP Screenshare client.
 
   Rename only. TYPES and METHODS are renamed to defeat casual decompilation
   (ILSpy / dnSpy) of the detection logic. FIELDS, PROPERTIES and EVENTS are
@@ -29,7 +29,7 @@
   <Var name="OptimizeMethods" value="true" />
   <Var name="SuppressIldasm" value="false" />
 
-  <Module file="$(InPath)\ssac-screenshare.dll">
+  <Module file="$(InPath)\error-pc-check.dll">
     <!-- C# anonymous types (new { ... }) are generic types with a parameterised
          constructor; System.Text.Json reads the ctor parameter names when it
          serialises them. Renaming nulls those names and STJ throws. All the
@@ -37,8 +37,8 @@
          types, so they must be left alone. -->
     <SkipType name="*AnonymousType*" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
     <!-- Records that are serialised to JSON: keep them intact for the same reason. -->
-    <SkipType name="SSAC.Client.ConsentPayload" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
-    <SkipType name="SSAC.Client.EnvironmentPayload" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
-    <SkipType name="SSAC.Client.FindingPayload" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
+    <SkipType name="ErrorSmp.Client.ConsentPayload" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
+    <SkipType name="ErrorSmp.Client.EnvironmentPayload" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
+    <SkipType name="ErrorSmp.Client.FindingPayload" skipProperties="true" skipFields="true" skipMethods="true" skipEvents="true" />
   </Module>
 </Obfuscator>

@@ -1,4 +1,4 @@
-# SSAC client agent (Phase 2)
+# Error SMP Screenshare client agent (Phase 2)
 
 Windows, C# / .NET 8, WinForms. Single-file self-contained `.exe`.
 
@@ -7,20 +7,20 @@ name on the consent screen without consuming the key) → consent screen
 (`docs/phase-0-design.md §5`) → `start` (consumes the key, opens the report) →
 runs scan modules, streaming progress + findings to the panel over an
 HMAC-signed channel → `complete` → shows the suspect exactly what was sent →
-exits and deletes `%TEMP%\ssac-*`.
+exits and deletes its temp working dirs under `%TEMP%`.
 
 ## Build
 
 ```bash
-dotnet build client/SSAC.Client.sln
-dotnet test  client/SSAC.Client.sln
+dotnet build client/ErrorSmp.Client.sln
+dotnet test  client/ErrorSmp.Client.sln
 ```
 
 ## Publish the single-file exe
 
 ```bash
-dotnet publish client/SSAC.Client/SSAC.Client.csproj -c Release
-# -> client/SSAC.Client/bin/Release/net8.0-windows/win-x64/publish/ssac-screenshare.exe
+dotnet publish client/ErrorSmp.Client/ErrorSmp.Client.csproj -c Release
+# -> client/ErrorSmp.Client/bin/Release/net8.0-windows/win-x64/publish/error-pc-check.exe
 ```
 
 ## Run against local Supabase (end-to-end check)
@@ -32,14 +32,14 @@ dotnet publish client/SSAC.Client/SSAC.Client.csproj -c Release
 4. Run the client pointed at the local function:
 
    ```bash
-   ssac-screenshare --key <KEY> --endpoint http://localhost:54321/functions/v1
+   Error_SMP_Screenshare.exe --key <KEY> --endpoint http://localhost:54321/functions/v1
    ```
 
 5. Watch the report fill in live on the panel's report page.
 
 ## Scan modules
 
-Run `ssac-screenshare --selftest` to execute every module locally with no
+Run `Error_SMP_Screenshare.exe --selftest` to execute every module locally with no
 network and print the findings (dev smoke test).
 
 | Module | What it reads | Signals | Priv |
@@ -66,7 +66,7 @@ info finding without it.
 
 ## Signature DB
 
-`signatures/ssac-signatures.json` (repo root) is embedded in the client and also
+`signatures/errorsmp-signatures.json` (repo root) is embedded in the client and also
 served by the public `signatures` Edge Function (client uses the newer of the
 two by `version` string; the version used is recorded in every report). Matchers:
 `file_name_regex`, `log_regex`, `string` (jar entry / config / log substring),

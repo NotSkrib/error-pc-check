@@ -1,5 +1,5 @@
-# SSAC local Supabase config. Run `supabase start` (needs Docker).
-project_id = "ssac"
+# Error SMP Screenshare local Supabase config. Run `supabase start` (needs Docker).
+project_id = "errorsmp"
 
 [api]
 enabled = true

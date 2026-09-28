@@ -1,7 +1,7 @@
 using System.Text;
 using Microsoft.Win32;
 
-namespace SSAC.Client;
+namespace ErrorSmp.Client;
 
 /// <summary>Shared parsing helpers for the Phase 3 out-of-instance forensic collectors.</summary>
 public static class Forensics
