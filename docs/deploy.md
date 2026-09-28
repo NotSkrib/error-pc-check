@@ -92,6 +92,34 @@ host the panel points at with `VITE_DOWNLOAD_BASE` (defaults to
 directly. `panel/vercel.json` keeps an identical `/d/:key` rewrite so old
 `ssac-panel.vercel.app/d/<KEY>` links still work.
 
+### Deploying the panel - push, do not run the CLI in `panel/`
+
+The `ssac-panel` Vercel project is **connected to this git repo**, so every
+push to `master` builds and promotes to production. Its `rootDirectory` is set
+to `panel`, which is what makes the git build correct.
+
+Do **not** run `vercel deploy` from inside `panel/`. With `rootDirectory` set,
+the CLI uploads `panel/`'s contents and Vercel then looks for `panel/panel`,
+which does not exist:
+
+    Error: The provided path "...\panel\panel" does not exist.
+
+To deploy the panel, just commit and push. The build is `npm run build`
+(→ `dist`) as configured on the project.
+
+`error-pc-check` is the opposite case: it is **not** git-connected and its
+`rootDirectory` is intentionally empty, so it is deployed from its own
+directory with the CLI as described above. If you ever connect it to git, set
+its `rootDirectory` to `error-pc-check` at the same time - otherwise a git
+build will serve the repository root instead of the site.
+
+Without the `ssac-panel` `rootDirectory` setting, git builds ran `npm run build`
+at the repository root, where the root `package.json` has no `build` script
+(only `e2e:seed` / `e2e:report`), so every push produced a failed production
+deploy:
+
+    npm error Missing script: "build"
+
 The client recovers the key from the download's `Zone.Identifier` mark-of-the-web
 stream (`HostUrl` = `.../d/<KEY>`), via `Options.KeyFromMarkOfTheWeb`. Order of
 recovery: `--key` arg → keyed file name (`errorsmp-<KEY>.exe` /
