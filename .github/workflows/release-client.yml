@@ -14,6 +14,10 @@ name: Release client (build + SignPath sign)
 #   secrets.R2_ACCESS_KEY_ID
 #   secrets.R2_SECRET_ACCESS_KEY
 #   vars.R2_BUCKET                        - defaults to ssac-assets
+#
+# Note: the root package.json is tooling scaffolding (version 0.0.0), not the
+# product. Release tooling that runs `npm version` will bump it to the release
+# version; that drift is harmless as long as the package is never published.
 
 on:
   push:
@@ -27,18 +31,47 @@ permissions:
 jobs:
   build-sign:
     runs-on: windows-latest
+    # Single source of truth for the released asset's name. The staging step
+    # and the attach step both read this, so they cannot drift apart - a
+    # mismatch here silently publishes a release with no asset attached.
+    env:
+      RELEASE_ASSET: Error_SMP_Screenshare.exe
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: "8.0.x" }
 
+      # Fail in seconds, naming what is missing, instead of after ~90s of
+      # Windows build with an opaque "api-token" error from the signing action.
+      - name: Preflight - signing config present
+        shell: bash
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          SIGNPATH_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+        run: |
+          missing=()
+          [ -n "$SIGNPATH_API_TOKEN" ]            || missing+=(secrets.SIGNPATH_API_TOKEN)
+          [ -n "$SIGNPATH_ORGANIZATION_ID" ]     || missing+=(vars.SIGNPATH_ORGANIZATION_ID)
+          [ -n "$SIGNPATH_PROJECT_SLUG" ]         || missing+=(vars.SIGNPATH_PROJECT_SLUG)
+          [ -n "$SIGNPATH_SIGNING_POLICY_SLUG" ] || missing+=(vars.SIGNPATH_SIGNING_POLICY_SLUG)
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::SignPath is not configured. Missing:"
+            for m in "${missing[@]}"; do echo "  - $m"; done
+            echo ""
+            echo "See the 'Required repo config' comment at the top of this workflow."
+            exit 1
+          fi
+          echo "SignPath config present."
+
       - name: Build + obfuscate + publish
         shell: bash
         run: |
           dotnet tool restore
           bash scripts/build-client.sh
-          mkdir dist
+          mkdir -p dist
           cp client/ErrorSmp.Client/bin/Release/net8.0-windows/win-x64/publish/error-pc-check.exe dist/error-pc-check.exe
 
       - name: Upload unsigned artifact
@@ -64,8 +97,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p out
-          cp signed/error-pc-check.exe out/Error_SMP_Screenshare.exe
-          sha256sum out/Error_SMP_Screenshare.exe
+          cp "signed/error-pc-check.exe" "out/$RELEASE_ASSET"
+          test -s "out/$RELEASE_ASSET" || { echo "::error::signed exe missing after staging"; exit 1; }
+          sha256sum "out/$RELEASE_ASSET"
 
       - name: Publish signed build to Cloudflare R2
         shell: bash
@@ -85,4 +119,4 @@ jobs:
       - name: Attach signed exe to the Release
         uses: softprops/action-gh-release@v2
         with:
-          files: out/Error_SMP_Screenshare.exe
+          files: out/${{ env.RELEASE_ASSET }}
