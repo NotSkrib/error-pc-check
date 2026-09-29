@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import type { ClientError } from "../lib/types";
@@ -41,10 +41,11 @@ export default function ClientErrors() {
       {err && <p className="text-sm text-brand">{err}</p>}
 
       {loading ? (
-        <div className="py-16 text-center text-sm text-fg-dim">Loading…</div>
+        <div className="animate-pulse py-16 text-center text-sm text-fg-dim">Loading…</div>
       ) : rows.length === 0 ? (
-        <div className="card p-10 text-center text-sm text-fg-dim">
-          No client crashes reported.
+        <div className="card border-sev-clean/25 p-10 text-center">
+          <p className="text-sm font-medium text-sev-clean">No client crashes reported.</p>
+          <p className="mt-1 text-xs text-fg-dim">An empty list is the goal.</p>
         </div>
       ) : (
         <section className="card overflow-hidden">
@@ -58,16 +59,25 @@ export default function ClientErrors() {
                   <th className="px-3 py-2.5 font-medium">Message</th>
                   <th className="px-3 py-2.5 font-medium">Version</th>
                   <th className="px-3 py-2.5 font-medium">OS</th>
+                  <th className="px-3 py-2.5" />
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => {
                   const isOpen = open === r.id;
                   return (
-                    <>
+                    <Fragment key={r.id}>
                       <tr
-                        key={r.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isOpen}
                         onClick={() => setOpen(isOpen ? null : r.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setOpen(isOpen ? null : r.id);
+                          }
+                        }}
                         className="cursor-pointer border-b border-ink-line/60 transition-colors last:border-0 hover:bg-white/[0.02]"
                       >
                         <td className="px-5 py-3 whitespace-nowrap text-xs text-fg-dim">
@@ -93,10 +103,13 @@ export default function ClientErrors() {
                         <td className="px-3 py-3 text-xs text-fg-dim">
                           {r.os_build?.replace("Microsoft Windows NT ", "") ?? "—"}
                         </td>
+                        <td className="px-5 py-3 text-right text-xs text-fg-dim">
+                          {isOpen ? "▾" : "▸"}
+                        </td>
                       </tr>
                       {isOpen && (
-                        <tr key={r.id + "-d"} className="border-b border-ink-line/60 bg-ink-0/40">
-                          <td colSpan={6} className="px-5 py-3">
+                        <tr className="border-b border-ink-line/60 bg-ink-0/40">
+                          <td colSpan={7} className="px-5 py-3">
                             <div className="mb-2 text-xs text-fg-dim">
                               {r.exception_type} · key {r.key_prefix ?? "—"} ·{" "}
                               {new Date(r.created_at).toLocaleString()}
@@ -107,7 +120,7 @@ export default function ClientErrors() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>

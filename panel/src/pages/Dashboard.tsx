@@ -44,6 +44,15 @@ export default function Dashboard() {
 
   const tenant = useMemo(() => tenants.find((t) => t.id === tenantId) ?? null, [tenants, tenantId]);
 
+  const stats = useMemo(() => {
+    const live = sessions.filter((s) => s.status === "pending" || s.status === "consumed").length;
+    const completed = sessions.filter((s) => s.status === "completed").length;
+    const flagged = Object.values(reports).filter((r) =>
+      ["medium", "high", "critical"].includes(r.verdict_severity),
+    ).length;
+    return { live, completed, flagged };
+  }, [sessions, reports]);
+
   async function loadRole(tid: string) {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
@@ -109,6 +118,7 @@ export default function Dashboard() {
     if (!tenantId) return;
     setRefreshing(true);
     try {
+      await expireStale();
       await Promise.all([loadSessions(tenantId), loadTenants()]);
     } finally {
       setRefreshing(false);
@@ -116,20 +126,41 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    // First tenant load legitimately hydrates state after mount (no
+    // data-query layer yet).
+    // oxlint-disable-next-line react/set-state-in-effect
     loadTenants();
   }, []);
   useEffect(() => {
     if (tenantId) {
-      loadSessions(tenantId);
-      loadRole(tenantId);
+      // Flip overdue pending sessions to `expired` first, so a stuck row
+      // stops holding the "live" state and stops the poll below. Reading
+      // `expireStale` here is safe: it's a hoisted function declaration and
+      // the React Compiler immutability lint misreads the ordering.
+      // oxlint-disable-next-line react/immutability
+      expireStale().then(() => {
+        loadSessions(tenantId);
+        loadRole(tenantId);
+      });
     }
   }, [tenantId]);
 
+  /** Quietly expires pending sessions past their window via the
+   *  Supabase `expire_stale_sessions()` function (pending → expired). */
+  async function expireStale() {
+    await supabase.rpc("expire_stale_sessions");
+  }
+
   // While a session is pending or mid-scan, poll so a report lands without an F5.
+  // expireStale() runs every tick: once a pending session passes its expiry the
+  // row becomes `expired`, hasLive drops, and the poll stops on its own.
   const hasLive = sessions.some((s) => s.status === "pending" || s.status === "consumed");
   useEffect(() => {
     if (!tenantId || !hasLive) return;
-    const id = setInterval(() => loadSessions(tenantId), 12000);
+    const id = setInterval(async () => {
+      await expireStale();
+      await loadSessions(tenantId);
+    }, 12000);
     return () => clearInterval(id);
   }, [tenantId, hasLive]);
 
@@ -152,7 +183,9 @@ export default function Dashboard() {
   }
 
   if (loading)
-    return <div className="py-20 text-center text-sm text-fg-dim">Loading…</div>;
+    return (
+      <div className="animate-pulse py-20 text-center text-sm text-fg-dim">Loading…</div>
+    );
 
   if (tenants.length === 0)
     return (
@@ -182,7 +215,18 @@ export default function Dashboard() {
             ))}
           </select>
         ) : (
-          <h1 className="text-lg font-semibold tracking-tight">{tenant?.name}</h1>
+          <h1 className="text-lg font-semibold tracking-tight">
+            {tenant?.name}
+            {hasLive && (
+              <span className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-[#3aa0d1]/10 px-2 py-0.5 align-middle text-[11px] font-normal text-[#3aa0d1]">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#3aa0d1] opacity-60" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#3aa0d1]" />
+                </span>
+                polling
+              </span>
+            )}
+          </h1>
         )}
         {tenant && (
           <div className="flex gap-1.5 text-[11px] text-fg-dim">
@@ -192,16 +236,48 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* live stats */}
+      <div className="flex flex-wrap gap-2">
+        <div className="stat">
+          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#3aa0d1]" />
+          <span className="k">Live</span>
+          <span className="v" style={{ color: stats.live ? "#3aa0d1" : undefined }}>
+            {stats.live}
+          </span>
+        </div>
+        <div className="stat">
+          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#37b26a]" />
+          <span className="k">Completed</span>
+          <span className="v" style={{ color: stats.completed ? "#37b26a" : undefined }}>
+            {stats.completed}
+          </span>
+        </div>
+        <div className="stat">
+          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#e5484d]" />
+          <span className="k">Flagged</span>
+          <span className="v" style={{ color: stats.flagged ? "#e5484d" : undefined }}>
+            {stats.flagged}
+          </span>
+        </div>
+        <p className="hidden w-full text-[11px] text-fg-dim sm:block">
+          Flagged = verdicts rated medium, high, or critical.
+        </p>
+      </div>
+
       {/* new key */}
       <section className="card overflow-hidden">
         <div className="border-b border-ink-line px-5 py-3">
           <h2 className="text-sm font-semibold">New session</h2>
+          <p className="mt-0.5 text-xs text-fg-dim">
+            Generate a one-time access command to hand to a suspect.
+          </p>
         </div>
         <div className="p-5">
           <form onSubmit={generateKey} className="flex flex-wrap items-end gap-3">
             <div className="min-w-[200px] flex-1">
-              <label className="label">Checked by</label>
+              <label htmlFor="case-label" className="label">Checked by</label>
               <input
+                id="case-label"
                 className="input mt-1"
                 placeholder="Your name"
                 value={caseLabel}
@@ -210,8 +286,9 @@ export default function Dashboard() {
               />
             </div>
             <div className="min-w-[180px] flex-1">
-              <label className="label">Minecraft username</label>
+              <label htmlFor="suspect-label" className="label">Minecraft username</label>
               <input
+                id="suspect-label"
                 className="input mt-1"
                 placeholder="MC username"
                 value={suspect}
@@ -224,7 +301,7 @@ export default function Dashboard() {
           {err && <p className="mt-3 text-sm text-brand">{err}</p>}
 
           {issued && (
-            <div className="mt-5 rounded-xl border border-brand/25 bg-brand/[0.06] p-4 shadow-glow">
+            <div className="glass-tint mt-5 rounded-xl p-4">
               <p className="text-sm text-fg-mut">
                 Give the person this command, then send them the access code when the script asks for it.
                 The code works once · expires{" "}
@@ -362,8 +439,10 @@ export default function Dashboard() {
                               s.status === "completed"
                                 ? "bg-sev-clean"
                                 : s.status === "pending" || s.status === "consumed"
-                                  ? "bg-sev-info"
-                                  : "bg-fg-dim"
+                                  ? "animate-pulse bg-sev-info"
+                                  : s.status === "expired"
+                                    ? "bg-sev-low"
+                                    : "bg-fg-dim"
                             }`}
                           />
                           {s.status}

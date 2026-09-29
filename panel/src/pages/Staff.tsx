@@ -112,7 +112,7 @@ export default function Staff() {
     load();
   }
 
-  if (loading) return <div className="py-20 text-center text-sm text-fg-dim">Loading…</div>;
+  if (loading) return <div className="animate-pulse py-20 text-center text-sm text-fg-dim">Loading…</div>;
 
   if (!authorized) {
     return (
@@ -140,22 +140,23 @@ export default function Staff() {
         <div className="p-5">
           <form onSubmit={createAccount} className="flex flex-wrap items-end gap-3">
             <div className="min-w-[200px] flex-1">
-              <label className="label">Username</label>
-              <input
-                className="input mt-1"
-                placeholder="Discord name"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
+                <label htmlFor="staff-username" className="label">Username</label>
+                <input
+                  id="staff-username"
+                  className="input mt-1"
+                  placeholder="Discord name"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
             <button disabled={busy} className="btn btn-primary h-[38px] px-4">
               {busy ? "Creating…" : "Create account"}
             </button>
           </form>
           {err && <p className="mt-3 text-sm text-brand">{err}</p>}
           {issued && (
-            <div className="mt-5 rounded-xl border border-brand/25 bg-brand/[0.06] p-4 shadow-glow">
+            <div className="glass-tint mt-5 rounded-xl p-4">
               <p className="text-sm text-fg-mut">
                 Credentials for <span className="text-fg">{issued.label}</span> — shown once, save them now.
               </p>
@@ -163,8 +164,17 @@ export default function Staff() {
                 <div>
                   email: <span className="text-fg">{issued.email}</span>
                 </div>
-                <div>
-                  password: <span className="text-fg">{issued.password}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span>
+                    password: <span className="text-fg">{issued.password}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn px-2 py-1 text-[11px]"
+                    onClick={() => navigator.clipboard?.writeText(issued.password)}
+                  >
+                    Copy
+                  </button>
                 </div>
               </div>
             </div>
@@ -199,7 +209,14 @@ export default function Staff() {
                     <td className="px-3 py-3 text-fg-mut">{a.email}</td>
                     <td className="px-3 py-3 font-mono text-xs">
                       {a.password ? (
-                        <span className="chip border-ink-line2 text-fg">{a.password}</span>
+                        <button
+                          type="button"
+                          className="chip cursor-pointer border-ink-line2 text-fg transition hover:border-fg-dim hover:bg-white/[0.12]"
+                          title="Copy password"
+                          onClick={() => navigator.clipboard?.writeText(a.password ?? "")}
+                        >
+                          {a.password}
+                        </button>
                       ) : (
                         <span className="text-fg-dim">reset to reveal</span>
                       )}

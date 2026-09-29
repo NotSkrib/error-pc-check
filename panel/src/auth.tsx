@@ -1,15 +1,9 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "./lib/supabase";
-
-interface AuthState {
-  session: Session | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-}
-
-const Ctx = createContext<AuthState>({ session: null, loading: true, signOut: async () => {} });
+import { AuthContext } from "./lib/auth-context";
+import { useAuth } from "./lib/useAuth";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -28,10 +22,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  return <Ctx.Provider value={{ session, loading, signOut }}>{children}</Ctx.Provider>;
+  return <AuthContext.Provider value={{ session, loading, signOut }}>{children}</AuthContext.Provider>;
 }
-
-export const useAuth = () => useContext(Ctx);
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();

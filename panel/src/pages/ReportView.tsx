@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import {
   SEVERITY_CLASS,
   SEVERITY_LABEL,
   SEVERITY_ORDER,
+  SEVERITY_COLOR,
   isCoverageGap,
   moduleLabel,
   severityRank,
@@ -61,7 +62,7 @@ export default function ReportView() {
   const [notFound, setNotFound] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!sessionId) return;
     const { data: s } = await supabase
       .from("sessions")
@@ -90,36 +91,45 @@ export default function ReportView() {
       setFindings(f ?? []);
       setEvents(e ?? []);
     }
-  }
-
-  useEffect(() => {
-    load();
   }, [sessionId]);
 
   useEffect(() => {
-    if (!report || report.status !== "running") return;
+    // Data fetch hydration after a route change (no data-query layer yet).
+    // oxlint-disable-next-line react/set-state-in-effect
+    load();
+  }, [sessionId, load]);
+
+  const reportId = report?.id;
+  const reportStatus = report?.status;
+
+  useEffect(() => {
+    if (!reportId || reportStatus !== "running") return;
     const ch = supabase
-      .channel(`report-${report.id}`)
+      .channel(`report-${reportId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "report_events", filter: `report_id=eq.${report.id}` },
+        { event: "INSERT", schema: "public", table: "report_events", filter: `report_id=eq.${reportId}` },
         (p) => setEvents((prev) => [...prev, p.new as ReportEvent]),
       )
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "findings", filter: `report_id=eq.${report.id}` },
+        { event: "INSERT", schema: "public", table: "findings", filter: `report_id=eq.${reportId}` },
         (p) => setFindings((prev) => [...prev, p.new as Finding]),
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "reports", filter: `id=eq.${report.id}` },
+        { event: "UPDATE", schema: "public", table: "reports", filter: `id=eq.${reportId}` },
         (p) => setReport(p.new as Report),
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [report?.id, report?.status]);
+    // Deps are the primitives `reportId`/`reportStatus`, not the `report`
+    // object: keying on `report` would tear down and recreate the channel on
+    // every report UPDATE we receive (the very events we subscribe to). The
+    // derived consts keep this subscription stable while staying exhaustive.
+  }, [reportId, reportStatus]);
 
   const real = useMemo(() => findings.filter((f) => !isCoverageGap(f)), [findings]);
   const gaps = useMemo(() => findings.filter(isCoverageGap), [findings]);
@@ -145,7 +155,7 @@ export default function ReportView() {
   const verdict = report?.verdict_severity ?? worstSeverity(real.map((f) => f.severity));
 
   if (notFound) return <p className="text-sm opacity-60">Session not found.</p>;
-  if (!session) return <div className="py-20 text-center text-sm text-fg-dim">Loading…</div>;
+  if (!session) return <div className="animate-pulse py-20 text-center text-sm text-fg-dim">Loading…</div>;
 
   const consent = report?.consent as
     | { accepted?: boolean; at?: string; browser_history_optin?: boolean }
@@ -213,6 +223,14 @@ export default function ReportView() {
                     {report.status}
                     {report.status === "running" && lastPct != null ? ` · ${lastPct}%` : ""}
                   </div>
+                  {report.status === "running" && lastPct != null && (
+                    <div className="mt-1.5 h-1 w-28 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-sev-info transition-all"
+                        style={{ width: `${Math.min(100, Math.max(0, lastPct))}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <div className="label">Client</div>
@@ -282,6 +300,7 @@ export default function ReportView() {
                   <div key={g.module} className="card overflow-hidden">
                     <button
                       className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition hover:bg-white/[0.02]"
+                      style={{ borderLeft: `4px solid ${SEVERITY_COLOR[g.worst]}` }}
                       onClick={() => setCollapsed((c) => ({ ...c, [g.module]: !isCollapsed }))}
                     >
                       <Badge severity={g.worst} />
@@ -294,10 +313,11 @@ export default function ReportView() {
                     {!isCollapsed && (
                       <div className="space-y-2 border-t border-ink-line p-3">
                         {g.findings.map((f) => (
-                          <div
-                            key={f.id}
-                            className="rounded-lg border border-ink-line bg-ink-1/50 p-3"
-                          >
+<div
+                          key={f.id}
+                          className="rounded-lg border border-ink-line bg-ink-1/50 p-3"
+                          style={{ borderLeft: `3px solid ${SEVERITY_COLOR[f.severity]}` }}
+                        >
                             <div className="flex items-center gap-2">
                               <Badge severity={f.severity} />
                               <span className="text-sm font-medium">{f.title}</span>

@@ -16,7 +16,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const IP_SALT = Deno.env.get("SSAC_IP_SALT") ?? "dev-salt";
+// Fail closed: IP hashing is only as good as the salt, and a predictable
+// "dev-salt" fallback would let stored IP hashes be reversed. Deploys must
+// set SSAC_IP_SALT explicitly; the handler refuses to run without it.
+const IP_SALT = Deno.env.get("SSAC_IP_SALT");
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
@@ -55,6 +58,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 Deno.serve(async (req) => {
+  if (!IP_SALT) return json({ error: "misconfigured: SSAC_IP_SALT not set" }, 500);
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
   const auth = req.headers.get("authorization") ?? "";

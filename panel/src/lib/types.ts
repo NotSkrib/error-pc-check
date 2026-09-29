@@ -24,6 +24,16 @@ export const SEVERITY_CLASS: Record<Severity, string> = {
   critical: "text-white bg-sev-critical border-sev-critical",
 };
 
+/** hex accent per severity for inline styles / bars that stay print-safe */
+export const SEVERITY_COLOR: Record<Severity, string> = {
+  clean: "#37b26a",
+  info: "#3aa0d1",
+  low: "#d1a33a",
+  medium: "#e0803a",
+  high: "#e5484d",
+  critical: "#ff5b6b",
+};
+
 export function worstSeverity(list: Severity[]): Severity {
   return list.reduce<Severity>(
     (acc, s) => (SEVERITY_ORDER.indexOf(s) > SEVERITY_ORDER.indexOf(acc) ? s : acc),

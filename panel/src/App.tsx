@@ -1,5 +1,6 @@
-import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
-import { useAuth, RequireAuth } from "./auth";
+import { Link, NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { RequireAuth } from "./auth";
+import { useAuth } from "./lib/useAuth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ReportView from "./pages/ReportView";
@@ -15,8 +16,8 @@ function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-full">
-      <div className="h-px bg-gradient-to-r from-transparent via-brand/70 to-transparent" />
-      <header className="sticky top-0 z-30 border-b border-ink-line bg-ink-0/80 backdrop-blur-xl">
+      <div className="h-px bg-gradient-to-r from-transparent via-violet-500/80 to-transparent" />
+      <header className="glass sticky top-0 z-30 border-0 border-b border-b-white/10">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
           <Link to="/" className="group flex items-center gap-2.5">
             <span className="brandmark">E</span>
@@ -25,13 +26,14 @@ function Shell({ children }: { children: React.ReactNode }) {
             </span>
             <span className="chip border-ink-line2 text-fg-mut">{PANEL_VERSION}</span>
           </Link>
-          <div className="flex items-center gap-3 text-sm">
-            <Link to="/errors" className="text-fg-dim hover:text-fg-mut">
+          <div className="flex items-center gap-1.5 text-sm">
+            <NavLink to="/errors" className="navlink" end>
               Crashes
-            </Link>
-            <Link to="/staff" className="text-fg-dim hover:text-fg-mut">
+            </NavLink>
+            <NavLink to="/staff" className="navlink" end>
               Staff
-            </Link>
+            </NavLink>
+            <span className="mx-1.5 h-4 w-px bg-white/10" />
             <span className="flex items-center gap-1.5 text-fg-mut">
               <span className="max-w-[200px] truncate">{who}</span>
             </span>
@@ -48,6 +50,9 @@ function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-5 py-8">{children}</main>
+      <footer className="mx-auto max-w-5xl px-5 pb-10 pt-2 text-center text-[11px] text-fg-dim">
+        Error SMP Screenshare · Staff Console {PANEL_VERSION} · evidence, not a verdict
+      </footer>
     </div>
   );
 }
