@@ -234,7 +234,7 @@ export default function Staff() {
                       {a.role !== "owner" && (
                         <button
                           onClick={() => removeAccount(a)}
-                          className="ml-3 text-xs text-fg-dim opacity-0 transition hover:text-brand group-hover:opacity-100"
+                          className="ml-3 text-xs text-fg-mut transition hover:text-brand"
                         >
                           Remove
                         </button>

@@ -5,7 +5,6 @@ import {
   SEVERITY_CLASS,
   SEVERITY_LABEL,
   SEVERITY_ORDER,
-  SEVERITY_COLOR,
   isCoverageGap,
   moduleLabel,
   severityRank,
@@ -199,7 +198,7 @@ export default function ReportView() {
           <section className="card p-5">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <div>
-                <div className="label">Verdict</div>
+                <div className="label">Highest finding severity</div>
                 <div className="mt-1">
                   <Badge severity={verdict} big />
                 </div>
@@ -297,10 +296,9 @@ export default function ReportView() {
               {groups.map((g) => {
                 const isCollapsed = collapsed[g.module] ?? false;
                 return (
-                  <div key={g.module} className="card overflow-hidden">
+                  <div key={g.module} className="border-t border-ink-line">
                     <button
-                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition hover:bg-white/[0.02]"
-                      style={{ borderLeft: `4px solid ${SEVERITY_COLOR[g.worst]}` }}
+                      className="flex w-full items-center gap-2.5 py-3 text-left transition-colors hover:bg-white/[0.025]"
                       onClick={() => setCollapsed((c) => ({ ...c, [g.module]: !isCollapsed }))}
                     >
                       <Badge severity={g.worst} />
@@ -311,12 +309,11 @@ export default function ReportView() {
                       </span>
                     </button>
                     {!isCollapsed && (
-                      <div className="space-y-2 border-t border-ink-line p-3">
+                      <div className="divide-y divide-ink-line">
                         {g.findings.map((f) => (
 <div
                           key={f.id}
-                          className="rounded-lg border border-ink-line bg-ink-1/50 p-3"
-                          style={{ borderLeft: `3px solid ${SEVERITY_COLOR[f.severity]}` }}
+                          className="py-3"
                         >
                             <div className="flex items-center gap-2">
                               <Badge severity={f.severity} />
@@ -365,7 +362,7 @@ export default function ReportView() {
           {/* scan log */}
           <section className="no-print">
             <h2 className="mb-2.5 text-sm font-semibold">Scan log</h2>
-            <div className="max-h-64 overflow-y-auto rounded-xl border border-ink-line bg-ink-0/60 p-3 font-mono text-xs leading-relaxed text-fg-mut">
+            <div className="max-h-64 overflow-y-auto rounded-md border border-ink-line bg-ink-0/60 p-3 font-mono text-xs leading-relaxed text-fg-mut">
               {events.map((e) => (
                 <div key={e.id}>
                   <span className="text-fg-dim">

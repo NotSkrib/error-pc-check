@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.IO.Compression;
 using ErrorSmp.Client;
 using Xunit;
 
@@ -279,5 +280,68 @@ public class SignatureDbTests
         foreach (var s in db.Signatures)
             foreach (var m in s.Matchers.Where(m => m.Kind.EndsWith("regex")))
                 _ = new System.Text.RegularExpressions.Regex(m.Value); // throws on bad pattern
+    }
+}
+
+public class MinecraftArchiveInspectorTests
+{
+    [Fact]
+    public void Nested_mod_metadata_is_available_to_the_existing_signature_matcher()
+    {
+        using var inner = new MemoryStream();
+        using (var archive = new ZipArchive(inner, ZipArchiveMode.Create, leaveOpen: true))
+        using (var writer = new StreamWriter(archive.CreateEntry("fabric.mod.json").Open()))
+            writer.Write("unique-nested-signature-token");
+        inner.Position = 0;
+
+        using var outerStream = new MemoryStream();
+        using (var outer = new ZipArchive(outerStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = outer.CreateEntry("META-INF/jars/dependency.jar");
+            using var output = entry.Open();
+            inner.CopyTo(output);
+        }
+        outerStream.Position = 0;
+
+        using var outerArchive = new ZipArchive(outerStream, ZipArchiveMode.Read);
+        var candidate = outerArchive.GetEntry("META-INF/jars/dependency.jar")!;
+        var budget = new NestedJarBudget(4, 8 * 1024 * 1024);
+        var nested = MinecraftArchiveInspector.ReadNestedJar(candidate, budget, default);
+
+        var target = new MatchTarget();
+        target.Strings.AddRange(nested.Where(x => x.Text is not null).Select(x => x.Text!));
+        var db = SignatureDb.Parse("""
+            {"version":"1","updated":"test","signatures":[{"id":"nested","name":"Nested marker","family":"test","type":"mod","severity_hint":"low","min_confidence":1,"matchers":[{"kind":"string","value":"unique-nested-signature-token","weight":1}]}]}
+            """);
+
+        Assert.Contains(nested, x => x.Name == "fabric.mod.json");
+        Assert.Contains(db.Match(target), x => x.Signature.Id == "nested");
+        Assert.False(budget.TryReserve(8 * 1024 * 1024));
+    }
+
+    [Theory]
+    [InlineData("META-INF/jars/dependency.jar", true)]
+    [InlineData("libs/dependency.jar", false)]
+    [InlineData("META-INF/jars/dependency.JAR", true)]
+    [InlineData("META-INF/jars/readme.txt", false)]
+    public void Only_manifested_nested_jar_locations_are_considered(string path, bool expected)
+        => Assert.Equal(expected, MinecraftArchiveInspector.IsNestedJar(path));
+
+    [Fact]
+    public void Nested_scan_obeys_count_and_byte_budgets()
+    {
+        using var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        using (var writer = new StreamWriter(archive.CreateEntry("META-INF/jars/a.jar").Open()))
+            writer.Write("x");
+        stream.Position = 0;
+        using var outer = new ZipArchive(stream, ZipArchiveMode.Read);
+        var entry = outer.Entries[0];
+
+        var noJarsLeft = new NestedJarBudget(0, 100);
+        Assert.Empty(MinecraftArchiveInspector.ReadNestedJar(entry, noJarsLeft, default));
+
+        var noBytesLeft = new NestedJarBudget(1, 0);
+        Assert.Empty(MinecraftArchiveInspector.ReadNestedJar(entry, noBytesLeft, default));
     }
 }

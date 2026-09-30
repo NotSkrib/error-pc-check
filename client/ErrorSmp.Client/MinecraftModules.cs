@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace ErrorSmp.Client;
@@ -64,6 +65,9 @@ public sealed class MinecraftModule(SignatureDb db) : IScanModule
 
     private const int MaxInstances = 20;
     private const int MaxTotalJars = 1500;
+    private const int MaxModFiles = 3000;
+    private const int MaxNestedJarsPerScan = 128;
+    private const long MaxNestedBytesPerScan = 64L * 1024 * 1024;
     private const long MaxJarBytes = 60L * 1024 * 1024;
     private const long MaxLogBytesPerInstance = 2L * 1024 * 1024;
     private long _logBudget = 24L * 1024 * 1024; // aggregate across all instances
@@ -87,6 +91,8 @@ public sealed class MinecraftModule(SignatureDb db) : IScanModule
         // Dedupe signature hits across instances; report one finding per signature.
         var byId = new Dictionary<string, (SignatureHit Hit, List<string> Instances)>();
         var jarBudget = MaxTotalJars;
+        var modFileBudget = MaxModFiles;
+        var nestedBudget = new NestedJarBudget(MaxNestedJarsPerScan, MaxNestedBytesPerScan);
 
         foreach (var inst in instances)
         {
@@ -94,7 +100,13 @@ public sealed class MinecraftModule(SignatureDb db) : IScanModule
             await ctx.Log(Name, $"instance: {inst}");
             var target = new MatchTarget();
 
-            var modCount = ScanMods(inst, target, ref jarBudget, ct);
+            var modCount = ScanMods(inst, target, ref jarBudget, nestedBudget, ct);
+            var renamedArchives = ScanRenamedArchives(inst, ref modFileBudget, ct);
+            foreach (var path in renamedArchives)
+                ctx.Add(new Finding(Name, Severity.Low,
+                    $"Archive content with non-JAR extension: {Path.GetFileName(path)}",
+                    "This file has a ZIP/JAR header inside a Minecraft mods folder but does not use a .jar extension. This is a triage lead only; archive content was not opened or executed.",
+                    new { path, scope = "Minecraft instance mods directory", indicator = "PK\\u0003\\u0004" }, SortKey: 20));
             ScanVersions(ctx, inst, target);
             ScanLogs(inst, target);
             ScanLauncherProfiles(ctx, inst);
@@ -145,7 +157,7 @@ public sealed class MinecraftModule(SignatureDb db) : IScanModule
         catch { return DateTime.MinValue; }
     }
 
-    private int ScanMods(string inst, MatchTarget target, ref int jarBudget, CancellationToken ct)
+    private int ScanMods(string inst, MatchTarget target, ref int jarBudget, NestedJarBudget nestedBudget, CancellationToken ct)
     {
         var modsDir = Path.Combine(inst, "mods");
         if (!Directory.Exists(modsDir) || jarBudget <= 0) return 0;
@@ -184,6 +196,16 @@ public sealed class MinecraftModule(SignatureDb db) : IScanModule
                                 using var r = new StreamReader(entry.Open());
                                 texts.Add(r.ReadToEnd());
                             }
+                            if (MinecraftArchiveInspector.IsNestedJar(entry.FullName))
+                            {
+                                var nested = MinecraftArchiveInspector.ReadNestedJar(
+                                    entry, nestedBudget, ct);
+                                foreach (var nestedEntry in nested)
+                                {
+                                    entryBlob.Append("nested:").Append(nestedEntry.Name).Append('\n');
+                                    if (nestedEntry.Text is not null) texts.Add(nestedEntry.Text);
+                                }
+                            }
                         }
                     }
                 }
@@ -199,6 +221,36 @@ public sealed class MinecraftModule(SignatureDb db) : IScanModule
             });
         return jars.Count;
     }
+
+    private static List<string> ScanRenamedArchives(string inst, ref int fileBudget, CancellationToken ct)
+    {
+        var modsDir = Path.Combine(inst, "mods");
+        if (!Directory.Exists(modsDir) || fileBudget <= 0) return [];
+
+        var files = SafeFiles(modsDir, "*")
+            .Where(path => !string.Equals(Path.GetExtension(path), ".jar", StringComparison.OrdinalIgnoreCase))
+            .Take(fileBudget)
+            .ToList();
+        fileBudget -= files.Count;
+
+        var matches = new List<string>();
+        var header = new byte[4];
+        foreach (var path in files)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                if (stream.Read(header, 0, header.Length) == header.Length && IsZipLocalHeader(header)) matches.Add(path);
+            }
+            catch { /* inaccessible files do not prevent the remaining scan */ }
+        }
+        return matches;
+    }
+
+    private static bool IsZipLocalHeader(ReadOnlySpan<byte> header)
+        => header.Length >= 4 && header[0] == 0x50 && header[1] == 0x4B
+            && header[2] == 0x03 && header[3] == 0x04;
 
     private static void ScanVersions(ScanContext ctx, string inst, MatchTarget target)
     {
@@ -319,5 +371,83 @@ public sealed class MinecraftModule(SignatureDb db) : IScanModule
     private static IEnumerable<string> SafeDirs(string p)
     {
         try { return Directory.EnumerateDirectories(p); } catch { return []; }
+    }
+}
+
+internal sealed record NestedJarEntry(string Name, string? Text);
+
+internal sealed class NestedJarBudget(int maxArchives, long maxBytes)
+{
+    private readonly object _gate = new();
+    private int _archivesLeft = maxArchives;
+    private long _bytesLeft = maxBytes;
+
+    internal bool TryReserve(long bytes)
+    {
+        lock (_gate)
+        {
+            if (_archivesLeft <= 0 || bytes <= 0 || bytes > _bytesLeft) return false;
+            _archivesLeft--;
+            _bytesLeft -= bytes;
+            return true;
+        }
+    }
+}
+
+internal static class MinecraftArchiveInspector
+{
+    private const long MaxNestedJarBytes = 4L * 1024 * 1024;
+    private const int MaxNestedEntries = 512;
+    private const int MaxMetadataBytes = 64 * 1024;
+
+    internal static bool IsNestedJar(string path)
+        => path.StartsWith("META-INF/jars/", StringComparison.OrdinalIgnoreCase)
+            && path.EndsWith(".jar", StringComparison.OrdinalIgnoreCase);
+
+    internal static List<NestedJarEntry> ReadNestedJar(
+        ZipArchiveEntry outerEntry,
+        NestedJarBudget budget,
+        CancellationToken ct)
+    {
+        if (outerEntry.Length <= 0 || outerEntry.Length > MaxNestedJarBytes
+            || !budget.TryReserve(outerEntry.Length))
+            return [];
+        try
+        {
+            using var source = outerEntry.Open();
+            using var memory = new MemoryStream((int)outerEntry.Length);
+            var buffer = new byte[81920];
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+                var read = source.Read(buffer, 0, buffer.Length);
+                if (read == 0) break;
+                if (memory.Length + read > outerEntry.Length) return [];
+                memory.Write(buffer, 0, read);
+            }
+            if (memory.Length != outerEntry.Length) return [];
+
+            memory.Position = 0;
+            using var nested = new ZipArchive(memory, ZipArchiveMode.Read);
+            var results = new List<NestedJarEntry>();
+            foreach (var entry in nested.Entries.Take(MaxNestedEntries))
+            {
+                ct.ThrowIfCancellationRequested();
+                string? text = null;
+                var name = entry.Name.ToLowerInvariant();
+                if (entry.Length is > 0 and <= MaxMetadataBytes
+                    && (name is "fabric.mod.json" or "mcmod.info" or "mods.toml" or "manifest.mf"
+                        || name.EndsWith(".mixins.json", StringComparison.Ordinal)))
+                {
+                    using var stream = entry.Open();
+                    using var reader = new StreamReader(stream, Encoding.UTF8, true, 4096, leaveOpen: false);
+                    text = reader.ReadToEnd();
+                }
+                results.Add(new NestedJarEntry(entry.FullName, text));
+            }
+            return results;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { return []; }
     }
 }

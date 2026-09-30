@@ -51,6 +51,9 @@ enabled = true
 [edge_runtime]
 enabled = true
 
+# Required secrets (set with `npx supabase secrets set`):
+#   SSAC_IP_SALT          - salt for client-IP hashing; ingest fails closed without it
+#   DISCORD_WEBHOOK_URL   - optional Discord webhook for "screenshare completed" announcements
 [functions.ingest]
 verify_jwt = false
 

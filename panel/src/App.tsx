@@ -16,42 +16,36 @@ function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-full">
-      <div className="h-px bg-gradient-to-r from-transparent via-violet-500/80 to-transparent" />
-      <header className="glass sticky top-0 z-30 border-0 border-b border-b-white/10">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
+      <header className="app-header sticky top-0 z-30 border-b">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-3">
           <Link to="/" className="group flex items-center gap-2.5">
             <span className="brandmark">E</span>
-            <span className="text-[15px] font-semibold tracking-tight text-fg">
-              Error SMP <span className="font-normal text-fg-dim">/ Staff Console</span>
+            <span className="text-sm font-semibold text-fg">
+              Error SMP <span className="font-normal text-fg-mut">Screenshare</span>
             </span>
-            <span className="chip border-ink-line2 text-fg-mut">{PANEL_VERSION}</span>
+            <span className="hidden rounded border border-ink-line px-1.5 py-0.5 text-[10px] text-fg-dim sm:inline-flex">{PANEL_VERSION}</span>
           </Link>
-          <div className="flex items-center gap-1.5 text-sm">
+          <nav aria-label="Main navigation" className="flex items-center gap-1">
+            <NavLink to="/" className="navlink" end>Sessions</NavLink>
             <NavLink to="/errors" className="navlink" end>
-              Crashes
+              Client errors
             </NavLink>
             <NavLink to="/staff" className="navlink" end>
               Staff
             </NavLink>
-            <span className="mx-1.5 h-4 w-px bg-white/10" />
-            <span className="flex items-center gap-1.5 text-fg-mut">
-              <span className="max-w-[200px] truncate">{who}</span>
-            </span>
+          </nav>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="max-w-[180px] truncate text-xs text-fg-mut" title={who}>{who}</span>
             <button
-              className="btn btn-ghost px-2.5 py-1.5"
-              onClick={async () => {
-                await signOut();
-                nav("/login");
-              }}
-            >
-              Sign out
-            </button>
+              className="btn btn-ghost px-2.5 py-1.5 text-xs"
+              onClick={async () => { await signOut(); nav("/login"); }}
+            >Sign out</button>
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-5 py-8">{children}</main>
-      <footer className="mx-auto max-w-5xl px-5 pb-10 pt-2 text-center text-[11px] text-fg-dim">
-        Error SMP Screenshare · Staff Console {PANEL_VERSION} · evidence, not a verdict
+      <main className="mx-auto max-w-6xl px-5 py-8">{children}</main>
+      <footer className="mx-auto max-w-6xl px-5 pb-8 pt-2 text-xs text-fg-dim">
+        Error SMP Screenshare <span className="px-1.5 text-fg-dim">·</span> Evidence for human review
       </footer>
     </div>
   );

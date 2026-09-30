@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [issued, setIssued] = useState<{ key: string; expires_at: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [sessionFilter, setSessionFilter] = useState<"all" | "active" | "completed">("all");
 
   const tenant = useMemo(() => tenants.find((t) => t.id === tenantId) ?? null, [tenants, tenantId]);
 
@@ -52,6 +53,12 @@ export default function Dashboard() {
     ).length;
     return { live, completed, flagged };
   }, [sessions, reports]);
+
+  const visibleSessions = useMemo(() => {
+    if (sessionFilter === "active") return sessions.filter((s) => s.status === "pending" || s.status === "consumed");
+    if (sessionFilter === "completed") return sessions.filter((s) => s.status === "completed");
+    return sessions;
+  }, [sessions, sessionFilter]);
 
   async function loadRole(tid: string) {
     const { data: u } = await supabase.auth.getUser();
@@ -199,77 +206,66 @@ export default function Dashboard() {
     );
 
   return (
-    <div className="space-y-6">
-      {/* context bar */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {tenants.length > 1 ? (
-          <select
-            className="input w-auto py-1.5"
-            value={tenantId ?? ""}
-            onChange={(e) => setTenantId(e.target.value)}
-          >
-            {tenants.map((t) => (
-              <option key={t.id} value={t.id} className="bg-ink-1">
-                {t.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <h1 className="text-lg font-semibold tracking-tight">
-            {tenant?.name}
-            {hasLive && (
-              <span className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-[#3aa0d1]/10 px-2 py-0.5 align-middle text-[11px] font-normal text-[#3aa0d1]">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#3aa0d1] opacity-60" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#3aa0d1]" />
-                </span>
-                polling
-              </span>
-            )}
-          </h1>
-        )}
+    <div className="space-y-7">
+      <section className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line pb-5">
+        <div>
+          <p className="mb-1 text-xs font-medium text-fg-mut">STAFF WORKSPACE</p>
+          {tenants.length > 1 ? (
+            <label className="block">
+              <span className="sr-only">Server</span>
+              <select
+                className="input mt-1 max-w-sm text-lg font-semibold"
+                value={tenantId ?? ""}
+                onChange={(e) => setTenantId(e.target.value)}
+              >
+                {tenants.map((t) => <option key={t.id} value={t.id} className="bg-ink-1">{t.name}</option>)}
+              </select>
+            </label>
+          ) : (
+            <h1 className="text-2xl font-semibold">{tenant?.name}</h1>
+          )}
+          <p className="mt-1.5 text-sm text-fg-mut">Create a consent-based check or review recent sessions.</p>
+          {hasLive && <p className="mt-2 inline-flex items-center gap-2 text-xs text-[#71b8d6]"><span className="h-1.5 w-1.5 rounded-full bg-[#71b8d6]" />Live updates are on</p>}
+        </div>
         {tenant && (
-          <div className="flex gap-1.5 text-[11px] text-fg-dim">
-            <span className="chip border-ink-line">commands expire in 2h</span>
-            <span className="chip border-ink-line">reports kept {tenant.retention_days}d</span>
+          <div className="flex flex-wrap gap-2 text-xs text-fg-mut">
+            <span className="chip border-ink-line">Keys expire after 2 hours</span>
+            <span className="chip border-ink-line">Reports retained {tenant.retention_days} days</span>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* live stats */}
-      <div className="flex flex-wrap gap-2">
+      <section aria-label="Recent session summary" className="flex flex-wrap items-center gap-y-3 border-b border-ink-line pb-5">
+        {tenants.length > 1 ? (
+          <p className="mr-5 hidden text-xs text-fg-dim sm:block">Summary for the latest {sessions.length} sessions</p>
+        ) : <p className="mr-5 hidden text-xs text-fg-dim sm:block">Latest {sessions.length} sessions</p>}
         <div className="stat">
-          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#3aa0d1]" />
           <span className="k">Live</span>
           <span className="v" style={{ color: stats.live ? "#3aa0d1" : undefined }}>
             {stats.live}
           </span>
         </div>
         <div className="stat">
-          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#37b26a]" />
           <span className="k">Completed</span>
           <span className="v" style={{ color: stats.completed ? "#37b26a" : undefined }}>
             {stats.completed}
           </span>
         </div>
         <div className="stat">
-          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#e5484d]" />
-          <span className="k">Flagged</span>
+          <span className="k">Needs review</span>
           <span className="v" style={{ color: stats.flagged ? "#e5484d" : undefined }}>
             {stats.flagged}
           </span>
         </div>
-        <p className="hidden w-full text-[11px] text-fg-dim sm:block">
-          Flagged = verdicts rated medium, high, or critical.
-        </p>
-      </div>
+        <span className="ml-auto hidden text-xs text-fg-dim md:block">Elevated severity requires human review.</span>
+      </section>
 
       {/* new key */}
       <section className="card overflow-hidden">
         <div className="border-b border-ink-line px-5 py-3">
           <h2 className="text-sm font-semibold">New session</h2>
-          <p className="mt-0.5 text-xs text-fg-dim">
-            Generate a one-time access command to hand to a suspect.
+          <p className="mt-1 text-xs text-fg-dim">
+            Issue a single-use key for a check the player has agreed to take part in.
           </p>
         </div>
         <div className="p-5">
@@ -296,7 +292,7 @@ export default function Dashboard() {
                 required
               />
             </div>
-            <button className="btn btn-primary h-[38px] px-4">Generate key</button>
+            <button className="btn btn-primary min-h-[42px] px-5">Generate one-time key</button>
           </form>
           {err && <p className="mt-3 text-sm text-brand">{err}</p>}
 
@@ -304,7 +300,7 @@ export default function Dashboard() {
             <div className="glass-tint mt-5 rounded-xl p-4">
               <p className="text-sm text-fg-mut">
                 Give the person this command, then send them the access code when the script asks for it.
-                The code works once · expires{" "}
+                The access code works once and expires{" "}
                 <span className="text-fg">{new Date(issued.expires_at).toLocaleTimeString()}</span>.
               </p>
 
@@ -380,18 +376,30 @@ export default function Dashboard() {
 
       {/* sessions */}
       <section className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-ink-line px-5 py-3">
-          <h2 className="text-sm font-semibold">
-            Sessions <span className="ml-1 text-fg-dim">{sessions.length}</span>
-          </h2>
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-line px-5 py-4">
+          <div>
+            <h2 className="text-base font-semibold">Recent sessions</h2>
+            <p className="mt-0.5 text-xs text-fg-mut">Findings are evidence for staff review, never an automatic decision.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div role="group" aria-label="Filter sessions" className="flex rounded-md border border-ink-line p-0.5">
+              {([ ["all", "All"], ["active", "Live"], ["completed", "Completed"] ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={sessionFilter === value}
+                  onClick={() => setSessionFilter(value)}
+                  className={`rounded px-2.5 py-1.5 text-xs transition-colors ${sessionFilter === value ? "bg-white/10 text-fg" : "text-fg-mut hover:text-fg"}`}
+                >{label}</button>
+              ))}
+            </div>
             <button
               onClick={refresh}
               disabled={refreshing}
               className="btn btn-ghost px-2.5 py-1 text-xs"
               title="Refresh sessions"
             >
-              {refreshing ? "Refreshing…" : "↻ Refresh"}
+              {refreshing ? "Refreshing…" : "Refresh"}
             </button>
             {isAdmin && sessions.length > 0 && (
               <button onClick={clearFinished} className="btn btn-ghost px-2.5 py-1 text-xs">
@@ -401,9 +409,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {sessions.length === 0 ? (
-          <div className="px-5 py-14 text-center text-sm text-fg-dim">
-            No sessions yet — generate a key above.
+        {visibleSessions.length === 0 ? (
+          <div className="px-5 py-14 text-center">
+            <p className="text-sm font-medium text-fg">{sessions.length === 0 ? "No sessions yet" : "No sessions in this view"}</p>
+            <p className="mt-1 text-sm text-fg-mut">{sessions.length === 0 ? "Create a one-time key above to begin a consent-based check." : "Choose another filter to see more sessions."}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -421,7 +430,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {sessions.map((s) => {
+                {visibleSessions.map((s) => {
                   const r = reports[s.id];
                   return (
                     <tr
@@ -433,7 +442,7 @@ export default function Dashboard() {
                       <td className="px-3 py-3 text-xs text-fg-mut">{s.created_by_label ?? "—"}</td>
                       <td className="px-3 py-3 font-mono text-xs text-fg-dim">{s.key_prefix}…</td>
                       <td className="px-3 py-3">
-                        <span className="inline-flex items-center gap-1.5 text-xs text-fg-mut">
+                          <span className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs ${s.status === "completed" ? "bg-sev-clean/10 text-sev-clean" : s.status === "pending" || s.status === "consumed" ? "bg-sev-info/10 text-sev-info" : "bg-white/[0.05] text-fg-mut"}`}>
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
                               s.status === "completed"
@@ -470,8 +479,8 @@ export default function Dashboard() {
                         })}
                       </td>
                       <td className="px-5 py-3 text-right whitespace-nowrap">
-                        <Link
-                          className="text-xs font-medium text-fg-mut hover:text-fg"
+                          <Link
+                          className="rounded px-2 py-1.5 text-xs font-medium text-fg hover:bg-white/10 hover:text-white"
                           to={`/reports/${s.id}`}
                         >
                           View
@@ -479,7 +488,7 @@ export default function Dashboard() {
                         {isAdmin && (
                           <button
                             onClick={() => deleteSession(s.id)}
-                            className="ml-3 text-xs text-fg-dim opacity-0 transition hover:text-brand group-hover:opacity-100"
+                            className="ml-3 text-xs text-fg-mut transition hover:text-brand"
                           >
                             Delete
                           </button>

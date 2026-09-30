@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import type { ClientError } from "../lib/types";
@@ -10,6 +10,19 @@ export default function ClientErrors() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [phase, setPhase] = useState("all");
+
+  const phases = useMemo(() => [...new Set(rows.map((row) => row.phase))].sort(), [rows]);
+  const visibleRows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (phase !== "all" && row.phase !== phase) return false;
+      if (!needle) return true;
+      return [row.phase, row.exception_type, row.message, row.client_version, row.os_build]
+        .some((value) => value?.toLowerCase().includes(needle));
+    });
+  }, [phase, query, rows]);
 
   useEffect(() => {
     (async () => {
@@ -26,31 +39,66 @@ export default function ClientErrors() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link to="/" className="text-sm text-fg-mut hover:text-fg">
-          ← Dashboard
-        </Link>
-        <h1 className="text-lg font-semibold tracking-tight">Client crashes</h1>
-        <span className="chip border-ink-line text-fg-dim">{rows.length}</span>
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-line pb-5">
+        <div>
+          <Link to="/" className="mb-3 inline-flex text-xs font-medium text-fg-mut transition hover:text-[var(--accent)]">
+            ← Sessions
+          </Link>
+          <h1 className="text-2xl font-semibold tracking-tight">Client errors</h1>
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-fg-mut">
+            Diagnostic reports from the screenshare client, including expired keys and connection failures.
+          </p>
+        </div>
+        <div className="flex items-baseline gap-2 rounded-lg border border-[color-mix(in_oklch,var(--accent)_28%,transparent)] bg-[color-mix(in_oklch,var(--accent)_9%,transparent)] px-4 py-2.5">
+          <span className="text-xl font-semibold tabular-nums text-[var(--accent)]">{rows.length}</span>
+          <span className="text-xs text-fg-mut">reports</span>
+        </div>
       </div>
-      <p className="text-sm text-fg-mut">
-        Unhandled exceptions the Error SMP Screenshare client posted home. Nothing here is good —
-        an empty list is the goal.
-      </p>
 
       {err && <p className="text-sm text-brand">{err}</p>}
 
       {loading ? (
         <div className="animate-pulse py-16 text-center text-sm text-fg-dim">Loading…</div>
       ) : rows.length === 0 ? (
-        <div className="card border-sev-clean/25 p-10 text-center">
-          <p className="text-sm font-medium text-sev-clean">No client crashes reported.</p>
-          <p className="mt-1 text-xs text-fg-dim">An empty list is the goal.</p>
+        <div className="card p-10 text-center">
+          <p className="text-sm font-medium text-fg">No client reports</p>
+          <p className="mt-1 text-xs text-fg-mut">Diagnostic events will appear here when received.</p>
         </div>
       ) : (
-        <section className="card overflow-hidden">
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+              <label className="relative min-w-[220px] flex-1 sm:max-w-md">
+                <span className="sr-only">Search client reports</span>
+                <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--accent)]">⌕</span>
+                <input
+                  className="input pl-9"
+                  type="search"
+                  placeholder="Search message, exception, version…"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </label>
+              <label>
+                <span className="sr-only">Filter by phase</span>
+                <select className="input min-w-36" value={phase} onChange={(event) => setPhase(event.target.value)}>
+                  <option value="all">All phases</option>
+                  {phases.map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+              </label>
+            </div>
+            <p aria-live="polite" className="text-xs tabular-nums text-fg-mut">
+              {visibleRows.length === rows.length ? `${rows.length} reports` : `${visibleRows.length} of ${rows.length} reports`}
+            </p>
+          </div>
+          {visibleRows.length === 0 ? (
+            <div className="card px-5 py-12 text-center">
+              <p className="text-sm font-medium text-fg">No matching reports</p>
+              <p className="mt-1 text-sm text-fg-mut">Try another search or phase.</p>
+            </div>
+          ) : <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="client-error-table w-full text-sm">
               <thead>
                 <tr className="border-b border-ink-line text-left text-[11px] uppercase tracking-[0.12em] text-fg-dim">
                   <th className="px-5 py-2.5 font-medium">When</th>
@@ -63,7 +111,7 @@ export default function ClientErrors() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => {
+                {visibleRows.map((r) => {
                   const isOpen = open === r.id;
                   return (
                     <Fragment key={r.id}>
@@ -78,7 +126,7 @@ export default function ClientErrors() {
                             setOpen(isOpen ? null : r.id);
                           }
                         }}
-                        className="cursor-pointer border-b border-ink-line/60 transition-colors last:border-0 hover:bg-white/[0.02]"
+                        className="client-error-row cursor-pointer border-b border-ink-line/60 transition-colors last:border-0"
                       >
                         <td className="px-5 py-3 whitespace-nowrap text-xs text-fg-dim">
                           {new Date(r.created_at).toLocaleString([], {
@@ -89,7 +137,7 @@ export default function ClientErrors() {
                           })}
                         </td>
                         <td className="px-3 py-3">
-                          <span className="chip border-ink-line2 text-fg-mut">{r.phase}</span>
+                          <span className="chip border-[color-mix(in_oklch,var(--accent)_24%,transparent)] bg-[color-mix(in_oklch,var(--accent)_8%,transparent)] text-[var(--accent)]">{r.phase}</span>
                         </td>
                         <td className="px-3 py-3 font-mono text-xs text-fg-mut">
                           {r.exception_type?.split(".").pop() ?? "—"}
@@ -126,6 +174,7 @@ export default function ClientErrors() {
               </tbody>
             </table>
           </div>
+          </div>}
         </section>
       )}
     </div>

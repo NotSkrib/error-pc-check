@@ -55,7 +55,7 @@ network and print the findings (dev smoke test).
 | `registry` | RunMRU, TypedPaths, Run keys, MUICache | suspicious autostart / typed path / run | user |
 | `recycle-bin` | `$Recycle.Bin\*\$I*` (v1 + v2) | deleted `.jar`/`.exe`/`.dll`, esp. from `mods\` (T7) | user |
 | `powershell-history` | `PSReadLine\ConsoleHost_history.txt` | download / inject / Defender-tamper commands | user |
-| `minecraft` | every instance's `mods/*.jar` (name + zip entries), `versions/*.json`, `logs/*.log(.gz)`, `launcher_profiles.json`, `config/` | **known-cheat signature DB** hits (Meteor/Wurst/LiquidBounce/RusherHack/…), `-javaagent` in a profile or version manifest, custom `mainClass`, cheaty config names (T1, T2) | user |
+| `minecraft` | every instance's `mods/*.jar` (name + zip entries + bounded nested JAR metadata), non-JAR file headers in `mods/`, `versions/*.json`, `logs/*.log(.gz)`, `launcher_profiles.json`, `config/` | **known-cheat signature DB** hits (Meteor/Wurst/LiquidBounce/RusherHack/…), `-javaagent` in a profile or version manifest, custom `mainClass`, cheaty config names, renamed archive triage (T1, T2) | user |
 | `usn-journal` | NTFS `$J` via FSCTL | deleted `.pf`, deleted cheat files, bulk wipe (T7) | admin |
 | `amcache` / `mft` | — | not implemented (offline hive / raw NTFS) — Phase 3b | admin |
 | `eventlog` | Security 4688 | process-creation events naming cheats | admin |

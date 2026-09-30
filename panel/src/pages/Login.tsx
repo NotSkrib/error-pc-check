@@ -24,42 +24,46 @@ export default function Login() {
   }
 
   return (
-    <div className="relative flex min-h-full items-center justify-center px-5 py-16">
+    <div className="relative flex min-h-screen items-center justify-center px-5 py-12">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="brandmark h-11 w-11 rounded-2xl text-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_0_0_1px_rgba(139,92,246,0.4),0_10px_30px_-8px_rgba(139,92,246,0.55)]">
+        <div className="mb-7 flex flex-col items-center text-center">
+          <span className="brandmark h-11 w-11 rounded-lg text-xl">
             E
           </span>
           <div className="mt-3 leading-tight">
-            <div className="text-[15px] font-semibold tracking-tight">Error SMP</div>
-            <div className="text-xs text-fg-dim">Staff console</div>
+            <div className="text-base font-semibold">Error SMP Screenshare</div>
+            <div className="mt-1 text-sm text-fg-mut">Staff sign in</div>
           </div>
         </div>
 
-        <div className="card glow p-5">
-          <form onSubmit={signIn} className="space-y-2.5">
-            <input
-              className="input"
-              type="email"
-              placeholder="email"
-              aria-label="Email"
-              autoComplete="username"
-              spellCheck={false}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              className="input"
-              type="password"
-              placeholder="password"
-              aria-label="Password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button className="btn btn-primary w-full py-2.5" disabled={busy !== "none"}>
+        <div className="card p-6">
+          <form onSubmit={signIn} className="space-y-4">
+            <div>
+              <label htmlFor="staff-email" className="label">Email</label>
+              <input
+                id="staff-email"
+                className="input mt-1.5"
+                type="email"
+                autoComplete="username"
+                spellCheck={false}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="staff-password" className="label">Password</label>
+              <input
+                id="staff-password"
+                className="input mt-1.5"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button className="btn btn-primary min-h-[42px] w-full" disabled={busy !== "none"}>
               {busy === "signin" ? "Signing in…" : "Sign in"}
             </button>
           </form>
@@ -71,7 +75,7 @@ export default function Login() {
           )}
         </div>
 
-        <p className="mt-4 text-center text-xs text-fg-dim">
+        <p className="mt-4 text-center text-xs leading-relaxed text-fg-mut">
           No public sign-up — an admin provisions staff accounts.
         </p>
       </div>

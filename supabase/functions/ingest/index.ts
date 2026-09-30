@@ -20,17 +20,91 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // "dev-salt" fallback would let stored IP hashes be reversed. Deploys must
 // set SSAC_IP_SALT explicitly; the handler refuses to run without it.
 const IP_SALT = Deno.env.get("SSAC_IP_SALT");
+// Optional Discord webhook. When set, every completed (or aborted) screenshare
+// posts an embed: who checked, who got checked, the verdict, and a report link.
+// Deploys without it silently skip the notification.
+const DISCORD_WEBHOOK_URL = Deno.env.get("DISCORD_WEBHOOK_URL");
+const PANEL_BASE = Deno.env.get("PANEL_BASE") ?? "https://ssac-panel.vercel.app";
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
 const enc = new TextEncoder();
 const SEVERITIES = ["clean", "info", "low", "medium", "high", "critical"] as const;
 
+const VERDICT_COLORS: Record<string, number> = {
+  clean: 0x37b26a,
+  info: 0x3aa0d1,
+  low: 0xd1a33a,
+  medium: 0xe0803a,
+  high: 0xe5484d,
+  critical: 0xff5b6b,
+};
+
+const VERDICT_LABELS: Record<string, string> = {
+  clean: "Clean",
+  info: "Info",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  critical: "Critical",
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json" },
   });
+}
+
+async function announceCompleted(
+  sessionId: string,
+  verdict: string,
+  counts: unknown,
+  aborted: boolean,
+): Promise<void> {
+  if (!DISCORD_WEBHOOK_URL) return;
+  try {
+    const { data: detail } = await admin
+      .from("sessions")
+      .select("case_label, suspect_label, created_by_label, tenants(name)")
+      .eq("id", sessionId)
+      .maybeSingle();
+    const tenant = detail?.tenants as { name?: string } | null;
+    const countsObj = counts && typeof counts === "object"
+      ? (counts as Record<string, number>)
+      : {};
+    const countsText = Object.entries(countsObj)
+      .filter(([, n]) => (n ?? 0) > 0)
+      .map(([k, n]) => `${k}: ${n}`)
+      .join("\n");
+    const link = `${PANEL_BASE}/reports/${sessionId}`;
+    const payload = {
+      username: "Error SMP Screenshare",
+      embeds: [{
+        title: aborted ? "Screenshare aborted" : "Screenshare completed",
+        description: tenant?.name ?? "Error SMP Screenshare",
+        color: aborted ? 0x597086 : (VERDICT_COLORS[verdict] ?? 0x3aa0d1),
+        url: link,
+        fields: [
+          { name: "Checked by", value: detail?.case_label ?? "—", inline: true },
+          { name: "Suspect", value: detail?.suspect_label ?? "—", inline: true },
+          { name: "Verdict", value: VERDICT_LABELS[verdict] ?? verdict, inline: true },
+          { name: "Findings", value: countsText || "no findings", inline: true },
+          { name: "Report", value: link, inline: false },
+        ],
+        footer: { text: aborted ? "report was aborted" : "evidence, not a verdict" },
+        timestamp: new Date().toISOString(),
+      }],
+    };
+    const res = await fetch(DISCORD_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) console.error(`discord webhook returned ${res.status}`);
+  } catch (e) {
+    console.error("discord webhook error", e);
+  }
 }
 
 async function sha256Hex(s: string): Promise<string> {
@@ -180,16 +254,18 @@ Deno.serve(async (req) => {
 
   if (action === "complete") {
     const verdict = String(body.verdict_severity ?? "info");
+    const aborted = body.status === "aborted";
     await admin
       .from("reports")
       .update({
-        status: body.status === "aborted" ? "aborted" : "complete",
+        status: aborted ? "aborted" : "complete",
         verdict_severity: SEVERITIES.includes(verdict as typeof SEVERITIES[number]) ? verdict : "info",
         findings_count: body.findings_count ?? {},
         completed_at: new Date().toISOString(),
       })
       .eq("id", report.id);
     await admin.from("sessions").update({ status: "completed" }).eq("id", session.id);
+    await announceCompleted(session.id, verdict, body.findings_count, aborted);
     return json({ ok: true });
   }
 

@@ -5,259 +5,212 @@
 
 :root {
   color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --surface: oklch(18% 0.034 295);
+  --surface-raised: oklch(21% 0.04 295);
+  --surface-glass: oklch(21% 0.05 295 / 0.76);
+  --surface-glass-strong: oklch(17% 0.04 295 / 0.88);
+  --line: oklch(76% 0.04 295 / 0.13);
+  --line-strong: oklch(76% 0.04 295 / 0.2);
+  --text: #f1f2f3;
+  --muted: #a3a6ab;
+  --quiet: #81858c;
+  --accent: oklch(69% 0.19 296);
+  --accent-strong: oklch(57% 0.22 296);
 }
 
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: oklch(12.5% 0.04 295);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
-  color: #e9e9ec;
-  background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(139, 92, 246, 0.1), transparent 60%),
-    #07080a;
 }
 
 ::selection {
-  background: rgba(139, 92, 246, 0.38);
+  background: oklch(69% 0.19 296 / 0.32);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
-/* Keyboard focus — keep it visible across glass */
 :is(a, button, [role="button"], input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid rgba(139, 92, 246, 0.75);
+  outline: 2px solid #ff777b;
   outline-offset: 2px;
-}
-*::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-*::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  border: 3px solid transparent;
-  background-clip: content-box;
-}
-
-/* ============================================================
-   Liquid Glass ambient background
-   The "content" the glass refracts: a slowly drifting aurora of
-   brand-red + cool glows sits behind the whole app. Glass
-   surfaces blur it in real time (see .glass / components below).
-   ============================================================ */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  pointer-events: none;
-  background:
-    radial-gradient(900px 560px at 16% -10%, rgba(139, 92, 246, 0.18), transparent 62%),
-    radial-gradient(820px 620px at 90% 6%, rgba(129, 90, 255, 0.13), transparent 60%),
-    radial-gradient(1100px 820px at 52% 118%, rgba(139, 92, 246, 0.1), transparent 66%),
-    radial-gradient(520px 420px at 34% 62%, rgba(217, 180, 255, 0.07), transparent 70%);
-  animation: lg-drift 28s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.035;
-  mix-blend-mode: soft-light;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
-}
-
-@keyframes lg-drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(1.6%, -2.4%, 0) scale(1.08);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body::before {
-    animation: none;
-  }
 }
 
 @layer components {
-  /* ---- Liquid Glass materials ----------------------------- */
-  .glass {
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
-    -webkit-backdrop-filter: blur(20px) saturate(170%);
-    backdrop-filter: blur(20px) saturate(170%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      0 8px 32px -14px rgba(0, 0, 0, 0.55);
-  }
-
-  /* high-transparency glass for hero / overlay moments */
+  .glass,
   .glass-clear {
-    border-color: rgba(255, 255, 255, 0.09);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+    border: 1px solid oklch(90% 0.035 295 / 0.16);
+    background: linear-gradient(145deg, oklch(35% 0.07 295 / 0.42), oklch(18% 0.04 295 / 0.78) 55%);
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.09), 0 18px 46px oklch(8% 0.025 295 / 0.2);
+    -webkit-backdrop-filter: blur(22px) saturate(145%);
+    backdrop-filter: blur(22px) saturate(145%);
   }
 
-  /* brand-tinted glass */
+  .glass-clear {
+    border-color: oklch(90% 0.035 295 / 0.1);
+    background: linear-gradient(145deg, oklch(35% 0.07 295 / 0.2), oklch(18% 0.04 295 / 0.56) 55%);
+  }
+
   .glass-tint {
-    border-color: rgba(139, 92, 246, 0.34);
-    background: linear-gradient(180deg, rgba(139, 92, 246, 0.16), rgba(139, 92, 246, 0.05));
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.16),
-      0 0 0 1px rgba(139, 92, 246, 0.12),
-      0 12px 40px -14px rgba(124, 58, 237, 0.4);
+    border: 1px solid oklch(78% 0.13 296 / 0.28);
+    background: oklch(58% 0.16 296 / 0.13);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
   }
 
-  /* ---- Components ----------------------------------------- */
   .card {
-    @apply rounded-xl border border-ink-line;
-    background: linear-gradient(180deg, rgba(19, 20, 24, 0.55), rgba(13, 14, 17, 0.55));
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
-    backdrop-filter: blur(22px) saturate(170%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      inset 0 0 60px -24px rgba(139, 92, 246, 0.12),
-      0 24px 48px -24px rgba(0, 0, 0, 0.65);
+    @apply overflow-hidden rounded-lg border border-ink-line;
+    background: var(--surface-glass);
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.045);
+    -webkit-backdrop-filter: blur(18px) saturate(135%);
+    backdrop-filter: blur(18px) saturate(135%);
+  }
+
+  .app-header {
+    border-color: oklch(90% 0.035 295 / 0.12);
+    background: var(--surface-glass-strong);
+    box-shadow: 0 8px 28px oklch(7% 0.025 295 / 0.16);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    backdrop-filter: blur(24px) saturate(150%);
+  }
+
+  .client-error-table thead {
+    background: oklch(69% 0.19 296 / 0.09);
+  }
+
+  .client-error-table thead th {
+    color: var(--muted);
+  }
+
+  .client-error-row:nth-child(even) {
+    background: oklch(69% 0.19 296 / 0.018);
+  }
+
+  .client-error-row:hover {
+    background: oklch(69% 0.19 296 / 0.06);
   }
 
   .label {
-    @apply text-[11px] font-medium uppercase tracking-[0.14em] text-fg-dim;
+    @apply text-xs font-medium text-fg-mut;
   }
 
   .input {
-    @apply w-full rounded-lg border px-3 py-2 text-sm text-fg outline-none transition placeholder:text-fg-dim;
-    border-color: rgba(255, 255, 255, 0.12);
-    background: linear-gradient(180deg, rgba(13, 14, 17, 0.6), rgba(13, 14, 17, 0.4));
-    -webkit-backdrop-filter: blur(14px) saturate(150%);
-    backdrop-filter: blur(14px) saturate(150%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    @apply w-full rounded-md border px-3 py-2.5 text-sm text-fg outline-none transition-colors placeholder:text-fg-dim;
+    border-color: var(--line-strong);
+    background: oklch(13% 0.03 295 / 0.62);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  .input:hover {
+    border-color: rgba(255, 255, 255, 0.24);
   }
 
   .input:focus {
-    border-color: rgba(139, 92, 246, 0.6);
-    background: linear-gradient(180deg, rgba(19, 20, 24, 0.72), rgba(13, 14, 17, 0.55));
-    box-shadow:
-      0 0 0 3px rgba(139, 92, 246, 0.18),
-      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.16);
   }
 
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium text-fg transition disabled:pointer-events-none disabled:opacity-40;
-    border-color: rgba(255, 255, 255, 0.16);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
-    -webkit-backdrop-filter: blur(14px) saturate(160%);
-    backdrop-filter: blur(14px) saturate(160%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium text-fg transition-colors disabled:pointer-events-none disabled:opacity-45;
+    border-color: var(--line-strong);
+    background: oklch(28% 0.04 295 / 0.62);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
   }
 
-  .btn:hover {
+  .btn:hover:not(:disabled) {
+    background: oklch(36% 0.05 295 / 0.76);
     border-color: rgba(255, 255, 255, 0.24);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
   }
 
-  .btn:active {
-    transform: translateY(1px);
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   .btn-primary {
-    border-color: rgba(139, 92, 246, 0.55);
-    background: linear-gradient(180deg, #a78bfa, #8b5cf6 55%, #6d28d9);
-    color: #fff;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.38),
-      0 0 0 1px rgba(139, 92, 246, 0.2),
-      0 10px 34px -10px rgba(124, 58, 237, 0.65);
+    border-color: var(--accent);
+    background: var(--accent-strong);
+    color: white;
   }
 
-  .btn-primary:hover {
-    background: linear-gradient(180deg, #c4b5fd, #a78bfa 55%, #7c3aed);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.42),
-      0 0 0 1px rgba(139, 92, 246, 0.24),
-      0 12px 38px -10px rgba(124, 58, 237, 0.75);
+  .btn-primary:hover:not(:disabled) {
+    border-color: oklch(78% 0.15 296);
+    background: oklch(63% 0.21 296);
   }
 
   .btn-ghost {
     border-color: transparent;
     background: transparent;
-    box-shadow: none;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 
-  .btn-ghost:hover {
-    background: rgba(255, 255, 255, 0.07);
+  .btn-ghost:hover:not(:disabled) {
     border-color: transparent;
+    background: rgba(255, 255, 255, 0.07);
   }
 
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold;
-    border-color: rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.08);
-    -webkit-backdrop-filter: blur(10px) saturate(150%);
-    backdrop-filter: blur(10px) saturate(150%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    @apply inline-flex items-center gap-1.5 rounded border px-2 py-1 text-[11px] font-medium;
+    background: rgba(255, 255, 255, 0.035);
   }
 
-  /* header nav pill */
-  /* soft purple halo for hero surfaces (login card etc.) */
   .glow {
-    filter: drop-shadow(0 0 26px rgba(139, 92, 246, 0.28));
+    filter: none;
   }
 
   .navlink {
-    @apply rounded-md px-2.5 py-1 text-sm text-fg-dim transition hover:text-fg;
+    @apply rounded-md px-3 py-2 text-sm text-fg-mut transition-colors hover:text-fg;
   }
 
   .navlink[aria-current="page"] {
-    color: #e9e9ec;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    backdrop-filter: blur(12px) saturate(160%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      0 6px 18px -8px rgba(139, 92, 246, 0.5);
+    color: var(--text);
+    background: oklch(69% 0.19 296 / 0.16);
   }
 
-  /* mini stat card for the dashboard strip */
   .stat {
-    @apply flex items-baseline gap-2 rounded-xl border border-white/10 px-3 py-2;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-    -webkit-backdrop-filter: blur(12px) saturate(150%);
-    backdrop-filter: blur(12px) saturate(150%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    @apply flex min-w-0 items-center gap-3 border-r border-ink-line px-5 py-1 first:pl-0 last:border-0;
   }
 
   .stat .k {
-    @apply text-[10px] font-medium uppercase tracking-[0.14em] text-fg-dim;
+    @apply text-xs text-fg-mut;
   }
 
   .stat .v {
-    @apply text-sm font-semibold;
+    @apply text-lg font-semibold tabular-nums;
   }
 
   .brandmark {
-    @apply grid h-6 w-6 place-items-center rounded-[7px] text-[13px] font-black text-white;
-    background: linear-gradient(180deg, #a78bfa, #8b5cf6 55%, #6d28d9);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.38),
-      0 0 0 1px rgba(139, 92, 246, 0.4),
-      0 6px 16px -6px rgba(124, 58, 237, 0.6);
+    @apply grid h-8 w-8 place-items-center rounded-md text-sm font-bold text-white;
+    background: var(--accent-strong);
+  }
+}
+
+@media (max-width: 640px) {
+  .stat {
+    @apply gap-2 px-3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -271,59 +224,28 @@ body::after {
   .chip {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
-    background: rgba(13, 14, 17, 0.96) !important;
   }
 }
 
 @media print {
-  :root {
-    color-scheme: light;
-  }
-  body {
-    background: #fff;
-    color: #111;
-  }
-  body::before,
-  body::after {
-    display: none !important;
-  }
-  .no-print,
-  header {
-    display: none !important;
-  }
-  main {
-    max-width: none !important;
-  }
-  .report-print,
-  .report-print * {
-    color: #111 !important;
-  }
+  :root { color-scheme: light; }
+  body { background: white; color: #111; }
+  .no-print, header { display: none !important; }
+  main { max-width: none !important; }
+  .report-print, .report-print * { color: #111 !important; }
   .report-print .card,
   .report-print section,
   .report-print .rounded,
   .report-print .rounded-lg,
   .report-print .rounded-xl {
     border-color: #ccc !important;
-    background: #fff !important;
+    background: white !important;
     box-shadow: none !important;
   }
-  .glass,
-  .glass-clear,
-  .glass-tint,
-  .input,
-  .btn,
-  .chip {
+  .glass, .glass-clear, .glass-tint, .input, .btn, .chip {
     border-color: #ccc !important;
-    background: #fff !important;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
+    background: white !important;
     box-shadow: none !important;
   }
-  .btn-primary {
-    background: #8b5cf6 !important;
-    color: #fff !important;
-  }
-  a[href]::after {
-    content: "";
-  }
+  a[href]::after { content: ""; }
 }
