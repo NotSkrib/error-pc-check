@@ -10,15 +10,15 @@
   text-rendering: optimizeLegibility;
   --surface: oklch(18% 0.034 295);
   --surface-raised: oklch(21% 0.04 295);
-  --surface-glass: oklch(21% 0.05 295 / 0.76);
-  --surface-glass-strong: oklch(17% 0.04 295 / 0.88);
-  --line: oklch(76% 0.04 295 / 0.13);
-  --line-strong: oklch(76% 0.04 295 / 0.2);
+  --surface-glass: oklch(24% 0.055 296 / 0.62);
+  --surface-glass-strong: oklch(16% 0.045 296 / 0.76);
+  --line: oklch(86% 0.045 296 / 0.15);
+  --line-strong: oklch(86% 0.045 296 / 0.24);
   --text: #f1f2f3;
   --muted: #a3a6ab;
   --quiet: #81858c;
-  --accent: oklch(69% 0.19 296);
-  --accent-strong: oklch(57% 0.22 296);
+  --accent: oklch(73% 0.17 296);
+  --accent-strong: oklch(58% 0.2 296);
 }
 
 html,
@@ -29,7 +29,13 @@ body,
 
 body {
   margin: 0;
-  background: oklch(12.5% 0.04 295);
+  background-color: oklch(11% 0.035 295);
+  background-image:
+    radial-gradient(ellipse 48rem 36rem at 8% -12%, oklch(43% 0.16 296 / 0.27), transparent 68%),
+    radial-gradient(ellipse 34rem 30rem at 96% 18%, oklch(36% 0.14 270 / 0.2), transparent 70%),
+    radial-gradient(ellipse 42rem 26rem at 52% 106%, oklch(32% 0.13 315 / 0.17), transparent 72%),
+    linear-gradient(150deg, oklch(14% 0.045 296), oklch(10% 0.03 278) 58%, oklch(12% 0.04 305));
+  background-attachment: fixed;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
@@ -44,46 +50,47 @@ body {
 }
 
 :is(a, button, [role="button"], input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid #ff777b;
+  outline: 2px solid oklch(82% 0.14 296);
   outline-offset: 2px;
 }
 
 @layer components {
   .glass,
   .glass-clear {
-    border: 1px solid oklch(90% 0.035 295 / 0.16);
-    background: linear-gradient(145deg, oklch(35% 0.07 295 / 0.42), oklch(18% 0.04 295 / 0.78) 55%);
-    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.09), 0 18px 46px oklch(8% 0.025 295 / 0.2);
-    -webkit-backdrop-filter: blur(22px) saturate(145%);
-    backdrop-filter: blur(22px) saturate(145%);
+    border: 1px solid oklch(92% 0.035 296 / 0.2);
+    background: linear-gradient(148deg, oklch(46% 0.1 296 / 0.32), oklch(24% 0.055 296 / 0.58) 42%, oklch(15% 0.035 280 / 0.78));
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.14), inset 0 -1px 0 oklch(80% 0.06 296 / 0.05), 0 8px 24px oklch(6% 0.03 285 / 0.2);
+    -webkit-backdrop-filter: blur(28px) saturate(165%);
+    backdrop-filter: blur(28px) saturate(165%);
   }
 
   .glass-clear {
-    border-color: oklch(90% 0.035 295 / 0.1);
-    background: linear-gradient(145deg, oklch(35% 0.07 295 / 0.2), oklch(18% 0.04 295 / 0.56) 55%);
+    border-color: oklch(90% 0.035 296 / 0.13);
+    background: linear-gradient(148deg, oklch(44% 0.09 296 / 0.2), oklch(18% 0.04 296 / 0.48) 58%);
   }
 
   .glass-tint {
-    border: 1px solid oklch(78% 0.13 296 / 0.28);
-    background: oklch(58% 0.16 296 / 0.13);
-    -webkit-backdrop-filter: blur(16px) saturate(140%);
-    backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid oklch(82% 0.13 296 / 0.36);
+    background: linear-gradient(135deg, oklch(63% 0.16 296 / 0.2), oklch(39% 0.13 280 / 0.12));
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.1);
+    -webkit-backdrop-filter: blur(20px) saturate(155%);
+    backdrop-filter: blur(20px) saturate(155%);
   }
 
   .card {
     @apply overflow-hidden rounded-lg border border-ink-line;
-    background: var(--surface-glass);
-    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.045);
-    -webkit-backdrop-filter: blur(18px) saturate(135%);
-    backdrop-filter: blur(18px) saturate(135%);
+    background: linear-gradient(145deg, oklch(29% 0.065 296 / 0.66), oklch(17% 0.04 283 / 0.74));
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.11), inset 0 -1px 0 oklch(80% 0.07 296 / 0.045);
+    -webkit-backdrop-filter: blur(24px) saturate(155%);
+    backdrop-filter: blur(24px) saturate(155%);
   }
 
   .app-header {
-    border-color: oklch(90% 0.035 295 / 0.12);
+    border-color: oklch(90% 0.035 296 / 0.16);
     background: var(--surface-glass-strong);
-    box-shadow: 0 8px 28px oklch(7% 0.025 295 / 0.16);
-    -webkit-backdrop-filter: blur(24px) saturate(150%);
-    backdrop-filter: blur(24px) saturate(150%);
+    box-shadow: inset 0 -1px 0 oklch(100% 0 0 / 0.055);
+    -webkit-backdrop-filter: blur(30px) saturate(165%);
+    backdrop-filter: blur(30px) saturate(165%);
   }
 
   .client-error-table thead {
@@ -120,20 +127,22 @@ body {
 
   .input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.16);
+    background: oklch(20% 0.05 296 / 0.78);
+    box-shadow: 0 0 0 3px oklch(69% 0.19 296 / 0.2), inset 0 1px 0 oklch(100% 0 0 / 0.07);
   }
 
   .btn {
     @apply inline-flex select-none items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium text-fg transition-colors disabled:pointer-events-none disabled:opacity-45;
     border-color: var(--line-strong);
-    background: oklch(28% 0.04 295 / 0.62);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
+    background: linear-gradient(145deg, oklch(37% 0.055 296 / 0.64), oklch(23% 0.04 282 / 0.72));
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.1);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
   }
 
   .btn:hover:not(:disabled) {
-    background: oklch(36% 0.05 295 / 0.76);
-    border-color: rgba(255, 255, 255, 0.24);
+    background: linear-gradient(145deg, oklch(46% 0.075 296 / 0.72), oklch(30% 0.055 282 / 0.8));
+    border-color: oklch(92% 0.04 296 / 0.3);
   }
 
   .btn:active:not(:disabled) {
@@ -141,14 +150,15 @@ body {
   }
 
   .btn-primary {
-    border-color: var(--accent);
-    background: var(--accent-strong);
+    border-color: oklch(84% 0.13 296 / 0.68);
+    background: linear-gradient(145deg, oklch(68% 0.18 296), oklch(52% 0.2 282));
     color: white;
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.24), 0 3px 10px oklch(43% 0.16 296 / 0.2);
   }
 
   .btn-primary:hover:not(:disabled) {
-    border-color: oklch(78% 0.15 296);
-    background: oklch(63% 0.21 296);
+    border-color: oklch(90% 0.1 296);
+    background: linear-gradient(145deg, oklch(74% 0.16 296), oklch(59% 0.19 282));
   }
 
   .btn-ghost {
