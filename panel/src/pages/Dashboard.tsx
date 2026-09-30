@@ -73,7 +73,6 @@ export default function Dashboard() {
   }
 
   async function deleteSession(id: string) {
-    if (!confirm("Delete this session and its report? This can't be undone.")) return;
     const { error } = await supabase.rpc("delete_session", { p_session: id });
     if (error) return setErr(error.message);
     if (tenantId) loadSessions(tenantId);
@@ -81,7 +80,6 @@ export default function Dashboard() {
 
   async function clearFinished() {
     if (!tenantId) return;
-    if (!confirm("Delete every completed / expired / revoked session for this server?")) return;
     const { data, error } = await supabase.rpc("purge_finished_sessions", { p_tenant: tenantId });
     if (error) return setErr(error.message);
     setErr(null);

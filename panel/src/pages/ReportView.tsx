@@ -51,6 +51,54 @@ function EvidenceView({ evidence }: { evidence: Record<string, unknown> }) {
   );
 }
 
+function appContext(evidence: Record<string, unknown>) {
+  const values = Object.values(evidence ?? {}).filter((value): value is string => typeof value === "string");
+  const path = values.find((value) => /[\\/]/.test(value));
+  const normalized = path?.replaceAll("/", "\\").toLowerCase() ?? "";
+  if (normalized.includes("modrinth")) {
+    return "This path is inside Modrinth's app or game-data folders. Launchers commonly keep cached game files and dependencies there, so the location alone is not evidence of cheating. Check the exact filename and what the scanner observed.";
+  }
+  if (normalized.includes("\\medal\\")) {
+    return "This path is inside Medal's app data. Recording and clipping apps create temporary/cache files; that can explain the location, but it does not identify this specific file. Check the filename and whether Minecraft actually loaded it.";
+  }
+  if (normalized.includes("\\temp\\") || normalized.includes("\\tmp\\")) {
+    return "This file is in a temporary folder. Windows apps often create short-lived files there, so the folder alone does not identify it as harmful. Check the filename, publisher, and whether Minecraft loaded or ran it.";
+  }
+  return null;
+}
+
+function coverageHelp(f: Finding) {
+  switch (f.module) {
+    case "prefetch":
+      return "Windows keeps a list of some apps it has opened. The scanner could not read that list, so this part of the history is missing. Running the check as administrator may help.";
+    case "bam":
+      return "Windows did not provide app-activity history for this account. This can happen on a new account or when Windows has no records available; it is not a detection.";
+    case "amcache":
+      return "This scanner does not yet read this Windows program-history database. No conclusion can be drawn from this check.";
+    case "eventlog":
+      return "The scanner could not read Windows security records. Administrator access and Windows process-logging settings may be required.";
+    case "usn-journal":
+      return "This Windows file-change history could not be checked. Administrator access is usually needed to see recent file deletions.";
+    case "mft":
+      return "Reading the detailed NTFS file index is not implemented yet. This check did not examine deleted-file records.";
+    case "java-crash-log":
+      return "No Java game crash record was found. This only means there was no matching crash log; it does not confirm or rule out other activity.";
+    default:
+      return f.description || "This check did not return usable information. It is not a detection.";
+  }
+}
+
+const ENVIRONMENT_LABEL: Record<string, string> = {
+  os_build: "Windows version",
+  uptime_seconds: "Time since Windows started (seconds)",
+  is_vm: "Virtual machine detected",
+  debugger_present: "Debugger attached to scan app",
+  client_hash_ok: "Scan app file check passed",
+  client_sha256: "Scan app file fingerprint",
+  parent_process: "App that started the scan",
+  elevated: "Ran as administrator",
+};
+
 export default function ReportView() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [session, setSession] = useState<SessionRow | null>(null);
@@ -182,8 +230,8 @@ export default function ReportView() {
       </div>
 
       <div className="rounded-lg border border-sev-medium/30 bg-sev-medium/[0.08] px-4 py-2.5 text-sm text-fg-mut">
-        Findings are <span className="text-fg">evidence, not a verdict</span>. A human must review.
-        The tool does not recommend or apply punishment.
+        Findings are <span className="text-fg">clues for a person to review</span>, not proof or an automatic decision.
+        Severity means how closely staff should review a match; it does not determine what happened.
       </div>
 
       {!report && (
@@ -274,7 +322,7 @@ export default function ReportView() {
                         (k === "client_hash_ok" && v === false);
                       return (
                         <tr key={k} className="border-t border-ink-line/60">
-                          <td className="w-44 py-1.5 pr-3 text-fg-dim">{k}</td>
+                          <td className="w-56 py-1.5 pr-3 text-fg-dim">{ENVIRONMENT_LABEL[k] ?? k.replaceAll("_", " ")}</td>
                           <td className={`py-1.5 font-mono ${warn ? "text-sev-high" : "text-fg-mut"}`}>
                             {String(v)}
                           </td>
@@ -294,7 +342,7 @@ export default function ReportView() {
             </h2>
             <div className="space-y-2.5">
               {groups.map((g) => {
-                const isCollapsed = collapsed[g.module] ?? false;
+                const isCollapsed = collapsed[g.module] ?? true;
                 return (
                   <div key={g.module} className="border-t border-ink-line">
                     <button
@@ -310,26 +358,41 @@ export default function ReportView() {
                     </button>
                     {!isCollapsed && (
                       <div className="divide-y divide-ink-line">
-                        {g.findings.map((f) => (
-<div
-                          key={f.id}
-                          className="py-3"
-                        >
-                            <div className="flex items-center gap-2">
-                              <Badge severity={f.severity} />
-                              <span className="text-sm font-medium">{f.title}</span>
-                            </div>
-                            {f.description && (
-                              <p className="mt-1.5 text-sm text-fg-mut">{f.description}</p>
-                            )}
-                            {f.occurred_at && (
-                              <p className="mt-1 text-xs text-fg-dim">
-                                occurred {new Date(f.occurred_at).toLocaleString()}
-                              </p>
-                            )}
-                            <EvidenceView evidence={f.evidence ?? {}} />
-                          </div>
-                        ))}
+                        {g.findings.map((f) => {
+                          const context = appContext(f.evidence ?? {});
+                          return (
+                            <details key={f.id} className="group/finding py-2.5">
+                              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md py-1 text-left marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] [&::-webkit-details-marker]:hidden">
+                                <span aria-hidden="true" className="w-3 text-xs text-fg-dim group-open/finding:rotate-90">▸</span>
+                                <Badge severity={f.severity} />
+                                <span className="text-sm font-medium">{f.title}</span>
+                              </summary>
+                              <div className="ml-5 mt-2 border-l border-ink-line pl-4">
+                                {context && (
+                                  <div className="mb-3 rounded-md border border-sev-info/25 bg-sev-info/[0.06] p-3">
+                                    <p className="text-xs font-semibold text-sev-info">Possible app or cache context</p>
+                                    <p className="mt-1 text-sm text-fg-mut">{context}</p>
+                                  </div>
+                                )}
+                                {f.description && (
+                                  <div>
+                                    <p className="text-xs font-medium text-fg">Why it was flagged</p>
+                                    <p className="mt-1 text-sm leading-relaxed text-fg-mut">{f.description}</p>
+                                  </div>
+                                )}
+                                {f.occurred_at && (
+                                  <p className="mt-2 text-xs text-fg-dim">
+                                    Observed {new Date(f.occurred_at).toLocaleString()}
+                                  </p>
+                                )}
+                                <details className="mt-3 rounded-md border border-ink-line/70 bg-ink-0/20 px-3 py-2">
+                                  <summary className="cursor-pointer text-xs font-medium text-fg-mut">Technical evidence</summary>
+                                  <EvidenceView evidence={f.evidence ?? {}} />
+                                </details>
+                              </div>
+                            </details>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -343,25 +406,25 @@ export default function ReportView() {
 
           {/* coverage gaps */}
           {gaps.length > 0 && (
-            <section className="card p-5">
-              <h2 className="label mb-1.5">Coverage gaps · {gaps.length}</h2>
-              <p className="mb-2.5 text-xs text-fg-dim">
-                Modules that couldn't run — usually not run as admin, or the artifact was absent.
-                Not detections.
+            <details className="card p-5">
+              <summary className="cursor-pointer text-sm font-semibold">Checks not completed · {gaps.length}</summary>
+              <p className="mb-3 mt-2 text-sm leading-relaxed text-fg-mut">
+                These are missing parts of the scan, not flags against the player. Some need administrator access, some had no history to show, and some are not implemented yet.
               </p>
-              <ul className="space-y-1 text-sm text-fg-mut">
+              <ul className="divide-y divide-ink-line/70">
                 {gaps.map((f) => (
-                  <li key={f.id}>
-                    <span className="text-fg-dim">{moduleLabel(f.module)}:</span> {f.title}
+                  <li key={f.id} className="py-3 first:pt-0 last:pb-0">
+                    <p className="text-sm font-medium text-fg">{moduleLabel(f.module)}</p>
+                    <p className="mt-1 text-sm text-fg-mut">{coverageHelp(f)}</p>
                   </li>
                 ))}
               </ul>
-            </section>
+            </details>
           )}
 
           {/* scan log */}
-          <section className="no-print">
-            <h2 className="mb-2.5 text-sm font-semibold">Scan log</h2>
+          <details className="no-print">
+            <summary className="mb-2.5 cursor-pointer text-sm font-semibold">Scan log</summary>
             <div className="max-h-64 overflow-y-auto rounded-md border border-ink-line bg-ink-0/60 p-3 font-mono text-xs leading-relaxed text-fg-mut">
               {events.map((e) => (
                 <div key={e.id}>
@@ -375,7 +438,7 @@ export default function ReportView() {
               ))}
               {events.length === 0 && <span className="text-fg-dim">no events</span>}
             </div>
-          </section>
+          </details>
         </>
       )}
     </div>
