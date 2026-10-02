@@ -418,10 +418,7 @@ export default function ReportView() {
             </h2>
             <div className="space-y-2.5">
               {groups.map((g) => {
-                const isImageGroup = /image|screenshot|picture|photo/i.test(
-                  `${g.module} ${moduleLabel(g.module)} ${g.findings.map((f) => `${f.title} ${f.description ?? ""}`).join(" ")}`,
-                );
-                const isCollapsed = collapsed[g.module] ?? isImageGroup;
+                const isCollapsed = collapsed[g.module] ?? true;
                 return (
                   <div key={g.module} className="border-t border-ink-line">
                     <button
@@ -439,16 +436,12 @@ export default function ReportView() {
                       <div className="divide-y divide-ink-line">
                         {g.findings.map((f) => {
                           const context = appContext(f.evidence ?? {});
-                          const isImageFinding = /image|screenshot|picture|photo/i.test(
-                            `${g.module} ${f.title} ${f.description ?? ""}`,
-                          );
                           return (
-                            <details key={f.id} className="group/finding py-2.5" open={!isImageFinding}>
-                              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md py-1 text-left marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] [&::-webkit-details-marker]:hidden">
-                                <span aria-hidden="true" className="w-3 text-xs text-fg-dim group-open/finding:rotate-90">▸</span>
+                            <article key={f.id} className="py-3 first:pt-2 last:pb-3">
+                              <div className="flex items-center gap-2 py-1 text-left">
                                 <Badge severity={f.severity} />
                                 <span className="text-sm font-medium">{f.title}</span>
-                              </summary>
+                              </div>
                               <div className="ml-5 mt-2 border-l border-ink-line pl-4">
                                 {context && (
                                   <div className="mb-3 rounded-md border border-sev-info/25 bg-sev-info/[0.06] p-3">
@@ -467,12 +460,12 @@ export default function ReportView() {
                                     Observed {new Date(f.occurred_at).toLocaleString()}
                                   </p>
                                 )}
-                                <details className="finding-evidence mt-3 rounded-md border border-ink-line/70 bg-ink-0/20 px-3 py-2">
-                                  <summary className="cursor-pointer text-xs font-medium text-fg-mut">Technical evidence</summary>
+                                <div className="finding-evidence mt-3 rounded-md border border-ink-line/70 bg-ink-0/20 px-3 py-2">
+                                  <p className="text-xs font-medium text-fg-mut">Technical evidence</p>
                                   <EvidenceView evidence={f.evidence ?? {}} />
-                                </details>
+                                </div>
                               </div>
-                            </details>
+                            </article>
                           );
                         })}
                       </div>
