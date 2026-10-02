@@ -88,6 +88,77 @@ function coverageHelp(f: Finding) {
   }
 }
 
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function downloadReportHtml({
+  session,
+  tenantName,
+  report,
+  groups,
+  gaps,
+  verdict,
+  counts,
+  consent,
+  env,
+}: {
+  session: SessionRow;
+  tenantName: string;
+  report: Report;
+  groups: { module: string; findings: Finding[] }[];
+  gaps: Finding[];
+  verdict: Severity;
+  counts: Partial<Record<Severity, number>>;
+  consent: { accepted?: boolean; at?: string; browser_history_optin?: boolean } | null | undefined;
+  env: Record<string, unknown> | null | undefined;
+}) {
+  const findingSections = groups.map((group) => `
+    <section>
+      <h2>${escapeHtml(moduleLabel(group.module))} <small>${group.findings.length} finding${group.findings.length === 1 ? "" : "s"}</small></h2>
+      ${group.findings.map((finding) => {
+        const context = appContext(finding.evidence ?? {});
+        const evidence = JSON.stringify(finding.evidence ?? {}, null, 2);
+        return `<article class="finding">
+          <h3><span class="badge ${escapeHtml(finding.severity)}">${escapeHtml(SEVERITY_LABEL[finding.severity])}</span> ${escapeHtml(finding.title)}</h3>
+          ${context ? `<p class="context"><strong>Possible app or cache context</strong><br>${escapeHtml(context)}</p>` : ""}
+          ${finding.description ? `<p><strong>Why it was flagged</strong><br>${escapeHtml(finding.description)}</p>` : ""}
+          ${finding.occurred_at ? `<p class="muted">Observed ${escapeHtml(new Date(finding.occurred_at).toLocaleString())}</p>` : ""}
+          <details><summary>Technical evidence</summary><pre>${escapeHtml(evidence)}</pre></details>
+        </article>`;
+      }).join("")}
+    </section>`).join("");
+  const environmentRows = Object.entries(env ?? {}).map(([key, value]) =>
+    `<tr><th>${escapeHtml(ENVIRONMENT_LABEL[key] ?? key.replaceAll("_", " "))}</th><td>${escapeHtml(value)}</td></tr>`,
+  ).join("");
+  const checks = gaps.length ? `<section><h2>Checks not completed (${gaps.length})</h2><p class="muted">These are missing parts of the scan, not flags against the player.</p><ul>${gaps.map((finding) => `<li><strong>${escapeHtml(moduleLabel(finding.module))}:</strong> ${escapeHtml(coverageHelp(finding))}</li>`).join("")}</ul></section>` : "";
+  const severityCounts = SEVERITY_ORDER.slice().reverse().filter((severity) => counts[severity]).map((severity) =>
+    `<span class="badge ${escapeHtml(severity)}">${counts[severity]} ${escapeHtml(SEVERITY_LABEL[severity])}</span>`,
+  ).join(" ");
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(session.case_label)} - Scan report</title>
+<style>
+  :root{color-scheme:light;font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:#1b1b22;background:#f6f5f9}body{max-width:920px;margin:32px auto;padding:0 22px}header,section{background:#fff;border:1px solid #dedce5;border-radius:10px;padding:20px;margin:16px 0}h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;border-bottom:1px solid #e8e6ed;padding-bottom:9px}h3{font-size:15px;margin:0 0 12px}.muted,small{color:#656371}.notice,.context{background:#f2effa;border:1px solid #ded5f3;padding:12px;border-radius:7px}.finding{padding:16px 0;border-bottom:1px solid #e8e6ed}.finding:last-child{border:0}.badge{display:inline-block;border:1px solid #ccc;border-radius:5px;padding:2px 8px;font-size:12px}.high{color:#bd263b;border-color:#e7a8b0}.medium{color:#986000;border-color:#e4c58b}.low,.info{color:#4256a0;border-color:#bbc4ea}.clean{color:#287548;border-color:#a9d0b4}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:7px;border-bottom:1px solid #eee}th{width:35%;color:#656371}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f4f7;padding:12px;border-radius:6px}details{margin-top:12px}summary{cursor:pointer}@media print{body{margin:0 auto;background:white}header,section{break-inside:avoid}.finding{break-inside:avoid}details:not([open])> :not(summary){display:block!important}}
+</style></head><body>
+<header><h1>${escapeHtml(session.case_label)}</h1><div class="muted">${escapeHtml(tenantName)} · Suspect ${escapeHtml(session.suspect_label ?? "—")} · Session ${escapeHtml(session.status)} · Created ${escapeHtml(new Date(session.created_at).toLocaleString())}</div><p class="notice">Findings are clues for a person to review, not proof or an automatic decision. Severity means how closely staff should review a match; it does not determine what happened.</p><p><strong>Highest finding severity:</strong> <span class="badge ${escapeHtml(verdict)}">${escapeHtml(SEVERITY_LABEL[verdict])}</span></p><p>${severityCounts || "No findings"}</p><p class="muted">Report status: ${escapeHtml(report.status)} · Client: ${escapeHtml(report.client_version ?? "—")} · Signatures: ${escapeHtml(report.signature_db_version ?? "—")}</p><p>Consent: ${consent ? `${consent.accepted ? "Accepted" : "Declined"}${consent.at ? ` · ${escapeHtml(new Date(consent.at).toLocaleString())}` : ""} · Browser downloads: ${consent.browser_history_optin ? "yes" : "no"}` : "Not recorded"}</p>${environmentRows ? `<h2>Environment</h2><table>${environmentRows}</table>` : ""}</header>
+${findingSections || "<section><h2>Findings</h2><p>No findings recorded.</p></section>"}${checks}
+<footer class="muted">Exported ${escapeHtml(new Date().toLocaleString())}</footer></body></html>`;
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${session.case_label || "scan-report"}.html`.replace(/[<>:"/\\|?*]/g, "-");
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 const ENVIRONMENT_LABEL: Record<string, string> = {
   os_build: "Windows version",
   uptime_seconds: "Time since Windows started (seconds)",
@@ -223,9 +294,14 @@ export default function ReportView() {
           </p>
         </div>
         {report && (
-          <button onClick={() => window.print()} className="no-print btn px-3">
-            Export PDF
-          </button>
+          <div className="no-print flex gap-2">
+            <button onClick={() => downloadReportHtml({ session, tenantName, report, groups, gaps, verdict, counts, consent: report.consent as { accepted?: boolean; at?: string; browser_history_optin?: boolean } | null, env: report.environment as Record<string, unknown> | null })} className="btn px-3">
+              Download HTML
+            </button>
+            <button onClick={() => window.print()} className="btn px-3">
+              Export PDF
+            </button>
+          </div>
         )}
       </div>
 
@@ -342,7 +418,10 @@ export default function ReportView() {
             </h2>
             <div className="space-y-2.5">
               {groups.map((g) => {
-                const isCollapsed = collapsed[g.module] ?? true;
+                const isImageGroup = /image|screenshot|picture|photo/i.test(
+                  `${g.module} ${moduleLabel(g.module)} ${g.findings.map((f) => `${f.title} ${f.description ?? ""}`).join(" ")}`,
+                );
+                const isCollapsed = collapsed[g.module] ?? isImageGroup;
                 return (
                   <div key={g.module} className="border-t border-ink-line">
                     <button
@@ -360,8 +439,11 @@ export default function ReportView() {
                       <div className="divide-y divide-ink-line">
                         {g.findings.map((f) => {
                           const context = appContext(f.evidence ?? {});
+                          const isImageFinding = /image|screenshot|picture|photo/i.test(
+                            `${g.module} ${f.title} ${f.description ?? ""}`,
+                          );
                           return (
-                            <details key={f.id} className="group/finding py-2.5">
+                            <details key={f.id} className="group/finding py-2.5" open={!isImageFinding}>
                               <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md py-1 text-left marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] [&::-webkit-details-marker]:hidden">
                                 <span aria-hidden="true" className="w-3 text-xs text-fg-dim group-open/finding:rotate-90">▸</span>
                                 <Badge severity={f.severity} />
@@ -385,7 +467,7 @@ export default function ReportView() {
                                     Observed {new Date(f.occurred_at).toLocaleString()}
                                   </p>
                                 )}
-                                <details className="mt-3 rounded-md border border-ink-line/70 bg-ink-0/20 px-3 py-2">
+                                <details className="finding-evidence mt-3 rounded-md border border-ink-line/70 bg-ink-0/20 px-3 py-2">
                                   <summary className="cursor-pointer text-xs font-medium text-fg-mut">Technical evidence</summary>
                                   <EvidenceView evidence={f.evidence ?? {}} />
                                 </details>

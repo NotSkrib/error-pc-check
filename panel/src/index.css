@@ -257,5 +257,13 @@ body {
     background: white !important;
     box-shadow: none !important;
   }
+  .report-print details,
+  .report-print details:not([open]) > :not(summary) {
+    display: block !important;
+  }
+  .report-print details > summary::marker,
+  .report-print details > summary::-webkit-details-marker {
+    display: none !important;
+  }
   a[href]::after { content: ""; }
 }
