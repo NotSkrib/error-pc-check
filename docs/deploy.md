@@ -57,24 +57,26 @@ scales with download volume.
    (`R2_ACCOUNT_ID`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` secrets,
    `R2_BUCKET` repo variable) so `release-client.yml` can publish builds.
 
-Build + publish, self-contained (no runtime needed), split into <=30 MB parts
-to keep individual PUTs small:
+Build + publish a small framework-dependent single-file client (requires the
+.NET 8 Windows Desktop Runtime), split into <=30 MB parts to keep individual
+PUTs small. The staff launcher offers the official Microsoft runtime installer
+when the runtime is missing:
 
 ```bash
 ./scripts/build-client.sh
 # = dotnet build  ->  obfuscar (rename-only, client/ErrorSmp.Client/obfuscar.xml)
-#   ->  dotnet publish --no-build   (bundles the obfuscated assembly)
-# ~145 MB. Do NOT add -p:EnableCompressionInSingleFile — a compressed
-# single-file bundle reads as "packed" to AV heuristics and picks up
-# false positives on VirusTotal. Obfuscar is rename-only (no string
-# encryption, no packing) for the same reason.
+#   ->  dotnet publish --no-build --self-contained false
+# ~3 MB app download; .NET 8 Desktop Runtime is installed separately if needed.
+# Keep bundle compression disabled; Obfuscar is rename-only (no string
+# encryption or packing).
 R2_ACCOUNT_ID=<id> R2_ACCESS_KEY_ID=<key id> R2_SECRET_ACCESS_KEY=<secret> \
   node scripts/split-upload.mjs client/ErrorSmp.Client/bin/Release/net8.0-windows/win-x64/publish/error-pc-check.exe
 # writes client/parts/part00..partNN + client/parts/manifest.json to R2
 ```
 
 `release-client.yml` runs this same script automatically on a tagged release
-once the `R2_*` GitHub secrets are set.
+once the `R2_*` GitHub secrets are set. Re-run the `Publish client build to R2`
+workflow after merging a change to replace the currently served binary.
 
 ### The download link
 
@@ -148,7 +150,7 @@ Email → Confirm email** off in the dashboard.
 ## Client
 
 ```bash
-dotnet publish client/ErrorSmp.Client/ErrorSmp.Client.csproj -c Release
+dotnet publish client/ErrorSmp.Client/ErrorSmp.Client.csproj -c Release -r win-x64 --self-contained false
 # -> client/ErrorSmp.Client/bin/Release/net8.0-windows/win-x64/publish/error-pc-check.exe
 #    (downloaded to the player as Error_SMP_Screenshare.exe)
 

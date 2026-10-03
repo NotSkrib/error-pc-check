@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the Error SMP Screenshare client: compile, obfuscate (rename-only,
-# see client/ErrorSmp.Client/obfuscar.xml), then publish the single-file exe with
-# the obfuscated assembly bundled in.
+# see client/ErrorSmp.Client/obfuscar.xml), then publish a small single-file exe
+# that uses the installed .NET Desktop Runtime.
 #
 #   ./scripts/build-client.sh
 #
@@ -21,8 +21,9 @@ dotnet tool restore >/dev/null
 ( cd client/ErrorSmp.Client && dotnet obfuscar.console obfuscar.xml )
 cp "$OUT/obfuscated/$DLL" "$OUT/$DLL"
 
-echo "[3/3] publish single-file (no rebuild, bundles the obfuscated dll)"
+echo "[3/3] publish framework-dependent single-file (no rebuild)"
 dotnet publish "$PROJ" -c Release -r win-x64 --no-build \
+  --self-contained false -p:PublishSingleFile=true -p:UseAppHost=true \
   -p:PublishReadyToRun=false -p:DebugType=none
 
 echo "done: $OUT/publish/error-pc-check.exe"

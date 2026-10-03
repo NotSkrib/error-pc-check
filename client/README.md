@@ -1,6 +1,6 @@
 # Error SMP Screenshare client agent (Phase 2)
 
-Windows, C# / .NET 8, WinForms. Single-file self-contained `.exe`.
+Windows, C# / .NET 8, WinForms. Small single-file `.exe`; requires the .NET 8 Desktop Runtime.
 
 The suspect runs this once. It: reads the key → `describe` (shows the real server
 name on the consent screen without consuming the key) → consent screen
@@ -16,10 +16,10 @@ dotnet build client/ErrorSmp.Client.sln
 dotnet test  client/ErrorSmp.Client.sln
 ```
 
-## Publish the single-file exe
+## Publish the framework-dependent single-file exe
 
 ```bash
-dotnet publish client/ErrorSmp.Client/ErrorSmp.Client.csproj -c Release
+dotnet publish client/ErrorSmp.Client/ErrorSmp.Client.csproj -c Release -r win-x64 --self-contained false
 # -> client/ErrorSmp.Client/bin/Release/net8.0-windows/win-x64/publish/error-pc-check.exe
 ```
 

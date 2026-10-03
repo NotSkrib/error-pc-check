@@ -364,8 +364,9 @@ export default function Dashboard() {
 
               <div className="mt-3 rounded-lg border border-ink-line bg-ink-0/60 p-3 text-xs text-fg-mut">
                 <span className="font-medium text-fg">Windows shows a blue “unrecognized app” box</span>{" "}
-                — normal for a new tool. Click <em>More info → Run anyway</em>. Self-contained
-                (~140&nbsp;MB), nothing installed, closes itself when done.
+                — normal for a new tool. Click <em>More info → Run anyway</em>. The client is a small
+                (~3&nbsp;MB) download. The first run may offer to install Microsoft&apos;s .NET 8 Desktop Runtime
+                (~50&nbsp;MB, one time); the scan itself does not install or run in the background.
               </div>
             </div>
           )}

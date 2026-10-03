@@ -51,8 +51,8 @@ The SmartScreen screen is reputation only - it doesn't mean "malware detected".
 If Defender/other AV actually quarantines the exe:
 
 1. Signing fixes most of it (signed binaries are trusted far more).
-2. Drop `EnableCompressionInSingleFile` from the publish (compressed bundles look
-   "packed" to heuristics) - the exe grows to ~145 MB / 5 parts.
+2. Keep `EnableCompressionInSingleFile` disabled; this project does not compress
+   the published bundle.
 3. Submit it for review: <https://www.microsoft.com/wdsi/filesubmission>
    (choose "software developer", "incorrectly detected as malware").
 4. Keep serving over HTTPS from the same domain so URL/domain reputation builds.
