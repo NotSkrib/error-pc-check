@@ -85,6 +85,7 @@ public sealed class ScanWindow : Window
         ShowInTaskbar = true;
         FontFamily = ClientFonts.Minecraft;
         Foreground = ClientPalette.Brush(ClientPalette.Text);
+        Icon = CreateWindowIcon();
 
         _chromeClose = new Button
         {
@@ -96,6 +97,7 @@ public sealed class ScanWindow : Window
             Background = Brushes.Transparent,
             Foreground = ClientPalette.Brush(ClientPalette.Muted),
             BorderBrush = Brushes.Transparent,
+            FocusVisualStyle = null,
             FontSize = 19,
             Padding = new Thickness(0, -3, 0, 0),
             Cursor = Cursors.Hand,
@@ -223,6 +225,7 @@ public sealed class ScanWindow : Window
             Foreground = Brushes.White,
             BorderBrush = ClientPalette.Brush(ClientPalette.AccentBright),
             BorderThickness = new Thickness(1),
+            FocusVisualStyle = null,
             FontWeight = FontWeights.SemiBold,
             Cursor = Cursors.Hand,
         };
@@ -409,7 +412,6 @@ public sealed class ScanWindow : Window
             _close.IsEnabled = true;
             _chromeClose.IsEnabled = true;
             _chromeClose.ToolTip = "Close";
-            _close.Focus();
         }));
     }
 
@@ -423,5 +425,20 @@ public sealed class ScanWindow : Window
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
         };
         _progress.BeginAnimation(ProgressBar.ValueProperty, animation);
+    }
+
+    private static ImageSource CreateWindowIcon()
+    {
+        using var stream = typeof(ScanWindow).Assembly.GetManifestResourceStream("errorsmp-mark.png")
+            ?? throw new InvalidOperationException("The Error SMP logo resource is missing.");
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.StreamSource = stream;
+        image.DecodePixelWidth = 64;
+        image.DecodePixelHeight = 64;
+        image.EndInit();
+        image.Freeze();
+        return image;
     }
 }

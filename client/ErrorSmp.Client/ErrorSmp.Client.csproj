@@ -14,9 +14,9 @@
          and (once code-signed) in the SmartScreen / UAC publisher line.
          An unsigned build still triggers SmartScreen's "unrecognized app" —
          see docs/signing.md; this is the prep so signing is one step. -->
-    <Version>0.4.1</Version>
-    <FileVersion>0.4.1.0</FileVersion>
-    <AssemblyVersion>0.4.1.0</AssemblyVersion>
+    <Version>0.4.2</Version>
+    <FileVersion>0.4.2.0</FileVersion>
+    <AssemblyVersion>0.4.2.0</AssemblyVersion>
     <Company>Error SMP</Company>
     <Product>Error SMP Screenshare</Product>
     <Authors>Error SMP</Authors>

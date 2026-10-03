@@ -495,7 +495,7 @@ internal sealed class FlowContext
             if (kind == "module_done") Interlocked.Increment(ref done);
             var pct = (int)(4 + 94.0 * done / modules.Length);
             if (kind is "module_start" or "module_done")
-                ui.Report($"Checking {(done + (kind == "module_start" ? 1 : 0))} of {modules.Length}…", pct);
+                ui.Report("Checking…", pct);
             await ingest.EventAsync(kind, module, message, pct, cts.Token);
         });
 
