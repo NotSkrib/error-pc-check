@@ -1,389 +1,427 @@
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Text;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace ErrorSmp.Client;
 
 public readonly record struct ConsentResult(bool Accepted, DateTimeOffset At, bool BrowserHistoryOptIn);
 
-internal static class Palette
+internal static class ClientPalette
 {
-    public static readonly Color Bg = ColorTranslator.FromHtml("#050A10");
-    public static readonly Color Card = ColorTranslator.FromHtml("#0A141E");
-    public static readonly Color Brand = ColorTranslator.FromHtml("#0C1824");
-    public static readonly Color Border = ColorTranslator.FromHtml("#1E3A4E");
-    public static readonly Color BorderHi = ColorTranslator.FromHtml("#2F6F88");
-    public static readonly Color Accent = ColorTranslator.FromHtml("#00A8D8");
-    public static readonly Color AccentBright = ColorTranslator.FromHtml("#39E5FF");
-    public static readonly Color AccentSoft = ColorTranslator.FromHtml("#74E8FF");
-    public static readonly Color Text = ColorTranslator.FromHtml("#D8E8F5");
-    public static readonly Color Dim = ColorTranslator.FromHtml("#8A97A8");
-    public static readonly Color Mut = ColorTranslator.FromHtml("#597086");
-    public static readonly Color Ctrl = ColorTranslator.FromHtml("#101824");
-    public static readonly Color Success = ColorTranslator.FromHtml("#37B26A");
-    public static readonly Color Danger = ColorTranslator.FromHtml("#E5484D");
+    public static readonly Color Background = Color.FromRgb(27, 13, 31);
+    public static readonly Color Surface = Color.FromRgb(37, 19, 43);
+    public static readonly Color SurfaceRaised = Color.FromRgb(52, 24, 64);
+    public static readonly Color Line = Color.FromArgb(55, 223, 96, 229);
+    public static readonly Color Text = Color.FromRgb(245, 243, 249);
+    public static readonly Color Muted = Color.FromRgb(184, 157, 190);
+    public static readonly Color Quiet = Color.FromRgb(132, 105, 139);
+    public static readonly Color Accent = Color.FromRgb(178, 40, 199);
+    public static readonly Color AccentBright = Color.FromRgb(235, 92, 239);
+    public static readonly Color Success = Color.FromRgb(115, 213, 157);
+    public static readonly Color Danger = Color.FromRgb(255, 137, 150);
+
+    public static SolidColorBrush Brush(Color color) => new(color);
 }
 
-internal static class Geometry
+internal static class ClientFonts
 {
-    public static GraphicsPath Rounded(Rectangle r, int radius)
+    private static readonly Lazy<FontFamily> MinecraftFace = new(LoadMinecraftFace);
+
+    public static FontFamily Minecraft => MinecraftFace.Value;
+
+    private static FontFamily LoadMinecraftFace()
     {
-        var path = new GraphicsPath();
-        int d = radius * 2;
-        path.AddArc(r.X, r.Y, d, d, 180, 90);
-        path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
-        path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
-        path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
-        path.CloseFigure();
-        return path;
+        var fontDirectory = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ErrorSmp", "Fonts");
+        Directory.CreateDirectory(fontDirectory);
+        ExtractFont("errorsmp-minecraft.ttf", System.IO.Path.Combine(fontDirectory, "Minecraft.ttf"));
+        var baseUri = new Uri(System.IO.Path.GetFullPath(fontDirectory) + System.IO.Path.DirectorySeparatorChar, UriKind.Absolute);
+        var minecraft = Fonts.GetFontFamilies(baseUri, "./")
+            .FirstOrDefault(family => family.FamilyNames.Values.Any(
+                name => string.Equals(name, "Minecraft", StringComparison.OrdinalIgnoreCase)));
+        return minecraft ?? throw new InvalidOperationException("The bundled Minecraft font could not be loaded.");
     }
 
-    public static Region RegionOf(Rectangle r, int radius)
+    private static void ExtractFont(string resourceName, string destination)
     {
-        using var path = Rounded(r, radius);
-        return new Region(path);
-    }
-}
-
-internal static class Drag
-{
-    [DllImport("user32.dll")] private static extern bool ReleaseCapture();
-    [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
-
-    private const int WM_NCLBUTTONDOWN = 0xA1;
-    private const int HTCAPTION = 0x2;
-
-    public static void Begin(Control anchor)
-    {
-        var hwnd = anchor.FindForm()?.Handle ?? anchor.Handle;
-        ReleaseCapture();
-        SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
-    }
-
-    public static void Wire(Control c)
-    {
-        c.MouseDown += (_, e) => { if (e.Button == MouseButtons.Left) Begin(c); };
+        using var source = typeof(ClientFonts).Assembly.GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException($"The bundled font {resourceName} is missing.");
+        if (File.Exists(destination) && new FileInfo(destination).Length == source.Length) return;
+        using var output = File.Create(destination);
+        source.CopyTo(output);
     }
 }
 
-public sealed class Spinner : Control
+public sealed class ScanWindow : Window
 {
-    private readonly System.Windows.Forms.Timer _t = new() { Interval = 33 };
-    private float _angle;
-
-    public Spinner()
-    {
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
-                 ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
-        BackColor = Color.Transparent;
-        Size = new Size(46, 46);
-        _t.Tick += (_, _) => { _angle = (_angle + 9f) % 360f; Invalidate(); };
-        _t.Start();
-    }
-
-    public bool Spinning
-    {
-        get => _t.Enabled;
-        set { _t.Enabled = value; Invalidate(); }
-    }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        var pad = 5f;
-        var r = new RectangleF(pad, pad, Width - pad * 2, Height - pad * 2);
-        using var track = new Pen(Color.FromArgb(32, 255, 255, 255), 3f);
-        e.Graphics.DrawEllipse(track, r);
-        if (_t.Enabled)
-        {
-            using var arc = new Pen(Palette.Accent, 3f)
-            { StartCap = LineCap.Round, EndCap = LineCap.Round };
-            e.Graphics.DrawArc(arc, r, _angle, 100f);
-        }
-        else
-        {
-            using var done = new Pen(Palette.Success, 3f) { StartCap = LineCap.Round };
-            e.Graphics.DrawArc(done, r, -90f, 360f);
-        }
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing) _t.Dispose();
-        base.Dispose(disposing);
-    }
-}
-
-public sealed class BrandBadge : Control
-{
-    public BrandBadge()
-    {
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
-                 ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
-        BackColor = Color.Transparent;
-        Size = new Size(40, 40);
-    }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-        var r = new Rectangle(1, 1, Width - 3, Height - 3);
-        using var fill = new LinearGradientBrush(r, Palette.Brand, Palette.Card, 45f);
-        using var path = Geometry.Rounded(r, 10);
-        g.FillPath(fill, path);
-        using var border = new Pen(Palette.BorderHi, 1f);
-        g.DrawPath(border, path);
-        using var font = new Font("Segoe UI", 15f, FontStyle.Bold);
-        using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-        using var brush = new SolidBrush(Palette.AccentSoft);
-        g.DrawString("E", font, brush, new RectangleF(r.X, r.Y, r.Width, r.Height), sf);
-    }
-}
-
-public sealed class GlowBar : Control
-{
-    private int _value;
-
-    public int Value
-    {
-        get => _value;
-        set
-        {
-            var v = Math.Clamp(value, 0, 100);
-            if (v == _value) return;
-            _value = v;
-            Invalidate();
-        }
-    }
-
-    public GlowBar()
-    {
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
-                 ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
-        BackColor = Color.Transparent;
-        Height = 8;
-    }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        var track = new Rectangle(0, 0, Width - 1, Height - 1);
-        using (var tp = Geometry.Rounded(track, track.Height / 2))
-        {
-            using var tb = new SolidBrush(Palette.Card);
-            g.FillPath(tb, tp);
-            using var pen = new Pen(Palette.Border, 1f);
-            g.DrawPath(pen, tp);
-        }
-        if (_value <= 0) return;
-        var fillW = Math.Max(3, (int)((Width - 4) * _value / 100.0));
-        var fill = new Rectangle(2, 2, fillW, Height - 5);
-        using var fp = Geometry.Rounded(fill, fill.Height / 2);
-        using (var glow = new Pen(Color.FromArgb(80, Palette.AccentSoft), 5f))
-            g.DrawPath(glow, fp);
-        using var fb = new LinearGradientBrush(fill, Palette.Accent, Palette.AccentBright, 0f);
-        g.FillPath(fb, fp);
-        using var edge = new Pen(Palette.AccentBright, 1f);
-        g.DrawPath(edge, fp);
-    }
-}
-
-public sealed class PillButton : Control
-{
-    private bool _hover;
-
-    public PillButton()
-    {
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
-                 ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-        Size = new Size(120, 36);
-        Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-        Cursor = Cursors.Hand;
-    }
-
-    protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
-    protected override void OnMouseLeave(EventArgs e) { _hover = false; Invalidate(); base.OnMouseLeave(e); }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-        var r = new Rectangle(1, 1, Width - 3, Height - 3);
-        using var path = Geometry.Rounded(r, r.Height / 2);
-        using (var brush = new SolidBrush(_hover ? Color.FromArgb(0x11, 0xC4, 0xFF) : Palette.Accent))
-            g.FillPath(brush, path);
-        using (var pen = new Pen(Palette.AccentBright, 1f))
-            g.DrawPath(pen, path);
-        using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-        using var font = new Font("Segoe UI", 10f, FontStyle.Bold);
-        using var tb = new SolidBrush(Color.White);
-        g.DrawString(Text, font, tb, new RectangleF(0, 0, Width, Height), sf);
-    }
-}
-
-public sealed class SimpleForm : Form
-{
-    private const int RADIUS = 12;
-    private readonly GlowBar _bar;
-    private readonly Label _heading;
-    private readonly Label _sub;
-    private readonly Spinner _spinner;
-    private readonly PillButton _close;
+    private readonly TextBlock _status;
+    private readonly TextBlock _percent;
+    private readonly TextBlock _headline;
+    private readonly TextBlock _summary;
+    private readonly ProgressBar _progress;
+    private readonly Button _close;
+    private readonly Button _chromeClose;
     private bool _done;
+    private bool _closed;
 
-    public SimpleForm(string serverName)
+    public ScanWindow(string serverName)
     {
-        Text = $"{serverName} Screenshare";
-        StartPosition = FormStartPosition.CenterScreen;
-        FormBorderStyle = FormBorderStyle.None;
-        MaximizeBox = false;
-        MinimizeBox = false;
-        TopMost = true;
+        Title = $"{serverName} Screenshare";
+        Width = 560;
+        Height = 340;
+        MinWidth = 520;
+        MinHeight = 340;
+        ResizeMode = ResizeMode.NoResize;
+        WindowStyle = WindowStyle.None;
+        AllowsTransparency = true;
+        Background = Brushes.Transparent;
+        WindowStartupLocation = WindowStartupLocation.CenterScreen;
         ShowInTaskbar = true;
-        ClientSize = new Size(400, 252);
-        BackColor = Palette.Bg;
-        ForeColor = Palette.Text;
-        Font = new Font("Segoe UI", 9.5f);
-        DoubleBuffered = true;
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
-                 ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+        FontFamily = ClientFonts.Minecraft;
+        Foreground = ClientPalette.Brush(ClientPalette.Text);
 
-        var brand = new BrandBadge { Location = new Point(24, 17) };
-
-        _heading = new Label
+        _chromeClose = new Button
         {
-            Bounds = new Rectangle(74, 14, 302, 26),
-            TextAlign = ContentAlignment.MiddleLeft,
-            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
-            ForeColor = Color.White,
-            BackColor = Palette.Bg,
-            Text = "Scanning",
+            Content = "×",
+            Width = 30,
+            Height = 28,
+            IsEnabled = false,
+            ToolTip = "Available when the check is complete",
+            Background = Brushes.Transparent,
+            Foreground = ClientPalette.Brush(ClientPalette.Muted),
+            BorderBrush = Brushes.Transparent,
+            FontSize = 19,
+            Padding = new Thickness(0, -3, 0, 0),
+            Cursor = Cursors.Hand,
         };
-        _sub = new Label
+        _chromeClose.Click += (_, _) => Close();
+
+        var shell = new Border
         {
-            Bounds = new Rectangle(74, 41, 302, 18),
-            TextAlign = ContentAlignment.MiddleLeft,
-            Font = new Font("Segoe UI", 10f),
-            ForeColor = Palette.Dim,
-            BackColor = Palette.Bg,
-            Text = "Initializing scan…",
+            CornerRadius = new CornerRadius(14),
+            BorderThickness = new Thickness(1),
+            BorderBrush = ClientPalette.Brush(Color.FromArgb(86, 185, 66, 195)),
+            Background = new LinearGradientBrush(
+                Color.FromArgb(252, 39, 18, 46),
+                Color.FromArgb(252, 19, 10, 26),
+                new Point(0, 0), new Point(1, 1)),
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                Color = Color.FromRgb(8, 6, 13),
+                BlurRadius = 28,
+                ShadowDepth = 8,
+                Opacity = 0.55,
+            },
+            Padding = new Thickness(1),
+            Opacity = 0,
+            RenderTransform = new TranslateTransform(0, 8),
         };
 
-        _spinner = new Spinner { Location = new Point(177, 86) };
-        _bar = new GlowBar { Bounds = new Rectangle(24, 164, 352, 8), Value = 0 };
+        var layout = new Grid();
+        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        _close = new PillButton
+        var header = BuildHeader(serverName);
+        Grid.SetRow(header, 0);
+        Grid.SetColumnSpan(header, 2);
+        layout.Children.Add(header);
+
+        _headline = new TextBlock
         {
-            Text = "Close",
-            Location = new Point(140, 190),
-            Size = new Size(120, 36),
-            Visible = false,
+            Text = "Getting things ready",
+            FontSize = 22,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = ClientPalette.Brush(ClientPalette.Text),
+            TextWrapping = TextWrapping.Wrap,
+        };
+        _summary = new TextBlock
+        {
+            Text = "",
+            FontSize = 12,
+            Foreground = ClientPalette.Brush(ClientPalette.Muted),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 8, 0, 0),
+        };
+        _status = new TextBlock
+        {
+            Text = "Starting…",
+            FontSize = 12,
+            FontWeight = FontWeights.Medium,
+            Foreground = ClientPalette.Brush(ClientPalette.Text),
+            TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        _percent = new TextBlock
+        {
+            Text = "Starting",
+            FontSize = 12,
+            Foreground = ClientPalette.Brush(ClientPalette.AccentBright),
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Right,
+        };
+        _progress = new ProgressBar
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Value = 0,
+            Height = 8,
+            Margin = new Thickness(0, 15, 0, 0),
+            Background = ClientPalette.Brush(Color.FromArgb(140, 13, 11, 20)),
+            Foreground = ClientPalette.Brush(ClientPalette.Accent),
+            BorderThickness = new Thickness(0),
+        };
+
+        var statusGrid = new Grid();
+        statusGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        statusGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(_status, 0);
+        Grid.SetColumn(_percent, 1);
+        statusGrid.Children.Add(_status);
+        statusGrid.Children.Add(_percent);
+
+        var progressCard = new Border
+        {
+            Margin = new Thickness(0, 24, 0, 0),
+            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(9),
+            BorderThickness = new Thickness(1),
+            BorderBrush = ClientPalette.Brush(ClientPalette.Line),
+            Background = new LinearGradientBrush(
+                Color.FromArgb(135, 51, 34, 75),
+                Color.FromArgb(100, 25, 18, 38),
+                new Point(0, 0), new Point(1, 1)),
+            Child = new StackPanel { Children = { statusGrid, _progress } },
+        };
+
+        var main = new StackPanel { Margin = new Thickness(36, 24, 36, 14) };
+        main.Children.Add(_headline);
+        main.Children.Add(_summary);
+        main.Children.Add(progressCard);
+        Grid.SetRow(main, 1);
+        Grid.SetColumnSpan(main, 2);
+        layout.Children.Add(main);
+
+        _close = new Button
+        {
+            Content = "Close",
+            Width = 110,
+            Height = 36,
+            IsEnabled = false,
+            Visibility = Visibility.Collapsed,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 0, 36, 18),
+            Background = new LinearGradientBrush(ClientPalette.Accent, Color.FromRgb(91, 48, 151), 0),
+            Foreground = Brushes.White,
+            BorderBrush = ClientPalette.Brush(ClientPalette.AccentBright),
+            BorderThickness = new Thickness(1),
+            FontWeight = FontWeights.SemiBold,
+            Cursor = Cursors.Hand,
         };
         _close.Click += (_, _) => Close();
+        Grid.SetRow(_close, 2);
+        Grid.SetColumn(_close, 1);
+        Grid.SetRow(_chromeClose, 0);
+        layout.Children.Add(_close);
 
-        var footer = new Label
+        var footer = new TextBlock
         {
-            Bounds = new Rectangle(0, 231, 400, 16),
-            TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI", 9f),
-            ForeColor = Palette.Mut,
-            BackColor = Palette.Bg,
-            Text = $"Error SMP Screenshare · v{AppInfo.Version}",
+            Text = "ErrorSmp  ·  Developed by notskrib",
+            FontSize = 9,
+            Foreground = ClientPalette.Brush(ClientPalette.Quiet),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(36, 0, 0, 0),
+        };
+        Grid.SetRow(footer, 2);
+        Grid.SetColumn(footer, 0);
+        layout.Children.Add(footer);
+
+        shell.Child = layout;
+        Content = shell;
+        var enter = new Storyboard();
+        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(420))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        };
+        Storyboard.SetTarget(fade, shell);
+        Storyboard.SetTargetProperty(fade, new PropertyPath(OpacityProperty));
+        enter.Children.Add(fade);
+        var slide = new DoubleAnimation(6, 0, TimeSpan.FromMilliseconds(460))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        };
+        Storyboard.SetTarget(slide, shell);
+        Storyboard.SetTargetProperty(slide, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
+        enter.Children.Add(slide);
+        Loaded += (_, _) => enter.Begin();
+        MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ButtonState == MouseButtonState.Pressed) DragMove();
+        };
+        Closing += (_, e) =>
+        {
+            if (!_done) e.Cancel = true;
+        };
+        Closed += (_, _) => _closed = true;
+    }
+
+    private UIElement BuildHeader(string serverName)
+    {
+        var header = new Border
+        {
+            Padding = new Thickness(22, 14, 18, 12),
+            BorderBrush = ClientPalette.Brush(Color.FromArgb(35, 255, 255, 255)),
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Background = new LinearGradientBrush(
+                Color.FromArgb(225, 24, 9, 29),
+                Color.FromArgb(232, 16, 8, 22),
+                new Point(0, 0), new Point(1, 1)),
+        };
+        var row = new Grid();
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var dots = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0),
+        };
+        foreach (var color in new[] { Color.FromRgb(90, 55, 128), Color.FromRgb(113, 68, 159), Color.FromRgb(149, 99, 197), Color.FromRgb(75, 50, 104) })
+        {
+            dots.Children.Add(new Ellipse
+            {
+                Width = 7,
+                Height = 7,
+                Fill = ClientPalette.Brush(color),
+                Margin = new Thickness(0, 0, 5, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+        }
+
+        var mark = new Border
+        {
+            Width = 62,
+            Height = 62,
+            Child = CreateBrandMark(),
         };
 
-        Drag.Wire(this);
-        Drag.Wire(brand);
-        Drag.Wire(_heading);
-        Drag.Wire(_sub);
-        Drag.Wire(footer);
-
-        Controls.Add(_close);
-        Controls.Add(_bar);
-        Controls.Add(_spinner);
-        Controls.Add(_sub);
-        Controls.Add(_heading);
-        Controls.Add(brand);
-        Controls.Add(footer);
-    }
-
-    protected override void OnHandleCreated(EventArgs e)
-    {
-        base.OnHandleCreated(e);
-        ApplyRegion();
-    }
-
-    protected override void OnResize(EventArgs e)
-    {
-        base.OnResize(e);
-        ApplyRegion();
-    }
-
-    private void ApplyRegion()
-    {
-        if (ClientSize.Width < 1 || ClientSize.Height < 1) return;
-        Region = Geometry.RegionOf(new Rectangle(Point.Empty, ClientSize), RADIUS);
-    }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        base.OnPaint(e);
-        var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        var rect = new Rectangle(0, 0, ClientSize.Width - 1, ClientSize.Height - 1);
-        using (var path = Geometry.Rounded(rect, RADIUS))
-        using (var pen = new Pen(Palette.Border, 1f))
-            g.DrawPath(pen, path);
-        using (var glow = new Pen(Color.FromArgb(120, Palette.Accent), 2f))
+        var brand = new StackPanel { Margin = new Thickness(5, 1, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        brand.Children.Add(new TextBlock
         {
-            g.DrawLine(glow, 20, 0, ClientSize.Width - 20, 0);
-        }
+            Text = "ErrorSmp",
+            FontSize = 15,
+            FontFamily = ClientFonts.Minecraft,
+            FontWeight = FontWeights.Bold,
+            Foreground = ClientPalette.Brush(ClientPalette.Text),
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        });
+
+        var minimize = new Button
+        {
+            Content = "−",
+            Width = 28,
+            Height = 28,
+            Background = Brushes.Transparent,
+            Foreground = ClientPalette.Brush(ClientPalette.Muted),
+            BorderBrush = Brushes.Transparent,
+            FontSize = 16,
+            Padding = new Thickness(0, -4, 0, 0),
+            Cursor = Cursors.Hand,
+            ToolTip = "Minimize",
+        };
+        minimize.Click += (_, _) => WindowState = WindowState.Minimized;
+
+        Grid.SetColumn(dots, 0);
+        Grid.SetColumn(mark, 1);
+        Grid.SetColumn(brand, 2);
+        Grid.SetColumn(minimize, 3);
+        Grid.SetColumn(_chromeClose, 4);
+        row.Children.Add(mark);
+        row.Children.Insert(0, dots);
+        row.Children.Add(brand);
+        row.Children.Add(minimize);
+        row.Children.Add(_chromeClose);
+        header.Child = row;
+        return header;
+    }
+
+    private static Image CreateBrandMark()
+    {
+        using var stream = typeof(ScanWindow).Assembly.GetManifestResourceStream("errorsmp-mark.png")
+            ?? throw new InvalidOperationException("The Error SMP logo resource is missing.");
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.StreamSource = stream;
+        image.EndInit();
+        image.Freeze();
+        return new Image
+        {
+            Source = image,
+            Stretch = Stretch.Uniform,
+        };
     }
 
     public void Report(string status, int? pct)
     {
-        _ = status;
-        if (IsDisposed) return;
-        BeginInvoke(() =>
+        if (_closed) return;
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
             if (_done) return;
-            if (pct is int p)
+            _status.Text = status;
+            if (pct is int value)
             {
-                _bar.Value = Math.Clamp(p, 0, 100);
-                _sub.Text = p < 12 ? "Initializing scan…" : "Scanning…";
+                AnimateProgress(value);
+                _percent.Text = $"{Math.Clamp(value, 0, 100)}%";
+                _headline.Text = value < 12 ? "Getting things ready" : "Checking this device";
+                _summary.Text = "";
             }
-        });
+        }));
     }
 
     public void Finish(Severity verdict, int findingCount, bool uploaded)
     {
-        _ = verdict;
-        _ = findingCount;
-        if (IsDisposed) return;
-        BeginInvoke(() =>
+        if (_closed) return;
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
             _done = true;
-            _spinner.Spinning = false;
-            _bar.Value = 100;
-            if (uploaded)
-            {
-                _heading.ForeColor = Palette.Success;
-                _heading.Text = "Scan complete";
-                _sub.Text = "You can close this window.";
-            }
-            else
-            {
-                _heading.ForeColor = Palette.Danger;
-                _heading.Text = "Couldn't finish";
-                _sub.Text = "Check your internet and ask for a new link.";
-            }
-            _close.Visible = true;
+            AnimateProgress(100);
+            _percent.Text = "Complete";
+            _headline.Text = uploaded ? "Check complete" : "Could not send results";
+            _headline.Foreground = ClientPalette.Brush(uploaded ? ClientPalette.Success : ClientPalette.Danger);
+            _status.Text = uploaded ? "Finished" : "Connection problem";
+            _summary.Text = uploaded
+                ? $"{findingCount} items recorded"
+                : "Check your connection and try again";
+            _close.Visibility = Visibility.Visible;
+            _close.IsEnabled = true;
+            _chromeClose.IsEnabled = true;
+            _chromeClose.ToolTip = "Close";
             _close.Focus();
-        });
+        }));
+    }
+
+    private void AnimateProgress(int percentage)
+    {
+        var animation = new DoubleAnimation(
+            _progress.Value,
+            Math.Clamp(percentage, 0, 100),
+            TimeSpan.FromMilliseconds(420))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        };
+        _progress.BeginAnimation(ProgressBar.ValueProperty, animation);
     }
 }

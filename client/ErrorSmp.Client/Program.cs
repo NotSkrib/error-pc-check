@@ -1,10 +1,10 @@
-using System.Windows.Forms;
+using System.Windows;
 
 namespace ErrorSmp.Client;
 
 public static class AppInfo
 {
-    public const string Version = "0.4.0";
+    public const string Version = "0.4.1";
     /// <summary>Set at scan start from the loaded SignatureDb; recorded in the report.</summary>
     public static string SignatureDbVersion { get; set; } = "embedded";
     // SaaS ingest base URL baked in; overridable for local dev with
@@ -139,15 +139,6 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
-        ApplicationConfiguration.Initialize();
-
-        // Make silent crashes visible instead of the process just vanishing.
-        Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
-        Application.ThreadException += (_, e) =>
-        {
-            Telemetry.Report("thread-exception", e.Exception);
-            ShowFatal(e.Exception);
-        };
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
             Telemetry.Report("domain-unhandled", e.ExceptionObject as Exception);
@@ -171,6 +162,17 @@ internal static class Program
             Headless.Run(opts, args.Contains("--browser-optin")).GetAwaiter().GetResult();
             return;
         }
+
+        // Keep unexpected UI-thread faults visible and shut down cleanly.
+        var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        app.DispatcherUnhandledException += (_, e) =>
+        {
+            Telemetry.Report("dispatcher-exception", e.Exception);
+            ShowFatal(e.Exception);
+            e.Handled = true;
+            app.Shutdown();
+        };
+
         if (opts is null)
         {
             var msg = args.Contains("--help") || args.Contains("-h") || args.Contains("/?")
@@ -178,13 +180,24 @@ internal static class Program
                   "Normally you just double-click the file the staff member sent you."
                 : "Error SMP Screenshare\n\nThis file needs to be run straight from the download link a staff member " +
                   "sent you. Re-download it from that link and run it again — don't move or rename it first.";
-            MessageBox.Show(msg, "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(msg, "Error SMP Screenshare", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
+        var flow = new FlowContext(opts, app);
+        app.Startup += async (_, _) =>
+        {
+            try { await flow.RunAsync(); }
+            catch (Exception ex)
+            {
+                ShowFatal(ex);
+                app.Shutdown();
+            }
+        };
+
         try
         {
-            Application.Run(new FlowContext(opts));
+            app.Run();
         }
         finally
         {
@@ -241,7 +254,7 @@ internal static class Program
         {
             MessageBox.Show(
                 $"The screenshare tool hit an unexpected error and has to close.\n\n{ex?.GetType().Name}: {ex?.Message}",
-                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "Error SMP Screenshare", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch { /* nothing more we can do */ }
     }
@@ -374,34 +387,19 @@ internal static class Headless
     }
 }
 
-/// <summary>Drives the whole run on the WinForms STA/sync-context thread.</summary>
-internal sealed class FlowContext : ApplicationContext
+/// <summary>Drives the scan flow on the WPF dispatcher thread.</summary>
+internal sealed class FlowContext
 {
     private readonly Options _opts;
+    private readonly Application _app;
 
-    public FlowContext(Options opts)
+    public FlowContext(Options opts, Application app)
     {
         _opts = opts;
-        // Kick off the async flow once the message loop is actually running.
-        // (In the constructor, before Application.Run, there is no WinForms
-        // SynchronizationContext yet — posting to it here would NRE and the
-        // process would exit before any window appeared.)
-        var start = new System.Windows.Forms.Timer { Interval = 1 };
-        start.Tick += async (_, _) =>
-        {
-            start.Stop();
-            start.Dispose();
-            try { await RunAsync(); }
-            catch (Exception ex)
-            {
-                Program.ShowFatal(ex);
-                ExitThread();
-            }
-        };
-        start.Start();
+        _app = app;
     }
 
-    private async Task RunAsync()
+    public async Task RunAsync()
     {
         using var ingest = new IngestClient(_opts.Endpoint, _opts.Key, _opts.Pin);
         var cts = new CancellationTokenSource();
@@ -417,23 +415,24 @@ internal sealed class FlowContext : ApplicationContext
             MessageBox.Show(
                 ex is IngestException ? ex.Message
                     : $"Couldn't reach the panel. Check your internet connection and try again.\n\n{ex.Message}",
-                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            ExitThread();
+                "Error SMP Screenshare", MessageBoxButton.OK, MessageBoxImage.Error);
+            _app.Shutdown();
             return;
         }
 
         if (desc.AlreadyUsed)
         {
             MessageBox.Show("This screenshare link has already been used. Ask the staff member for a new one.",
-                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            ExitThread();
+                "Error SMP Screenshare", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _app.Shutdown();
             return;
         }
 
         // Simple flow: one window, auto-start. Running the keyed file the staff
         // member sent is the consent; it is recorded automatically (flow=simple).
-        var ui = new SimpleForm(desc.ServerName);
-        ui.FormClosed += (_, _) => { try { ExitThread(); } catch { } };
+        var ui = new ScanWindow(desc.ServerName);
+        _app.MainWindow = ui;
+        ui.Closed += (_, _) => _app.Shutdown();
         ui.Show();
         ui.Report("Preparing…", 2);
 
@@ -459,7 +458,7 @@ internal sealed class FlowContext : ApplicationContext
             MessageBox.Show(
                 ex is IngestException ? ex.Message
                     : "Couldn't reach the panel. Check your internet connection and try again.",
-                "Error SMP Screenshare", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "Error SMP Screenshare", MessageBoxButton.OK, MessageBoxImage.Error);
             ui.Finish(Severity.Info, 0, uploaded: false);
             return;
         }
@@ -533,6 +532,6 @@ internal sealed class FlowContext : ApplicationContext
         catch { uploadedOk = false; }
 
         ui.Finish(ctx.Verdict, ctx.Findings.Count, uploadedOk);
-        // ExitThread happens when the user closes the window (FormClosed handler).
+        // The application shuts down when the finished scan window closes.
     }
 }

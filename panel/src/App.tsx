@@ -7,7 +7,7 @@ import ReportView from "./pages/ReportView";
 import ClientErrors from "./pages/ClientErrors";
 import Staff from "./pages/Staff";
 
-const PANEL_VERSION = "v2.3";
+const PANEL_VERSION = "v2.4";
 
 function Shell({ children }: { children: React.ReactNode }) {
   const { session, signOut } = useAuth();

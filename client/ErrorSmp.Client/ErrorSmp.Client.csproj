@@ -5,7 +5,7 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
     <LangVersion>latest</LangVersion>
     <AssemblyName>error-pc-check</AssemblyName>
     <RootNamespace>ErrorSmp.Client</RootNamespace>
@@ -14,9 +14,9 @@
          and (once code-signed) in the SmartScreen / UAC publisher line.
          An unsigned build still triggers SmartScreen's "unrecognized app" —
          see docs/signing.md; this is the prep so signing is one step. -->
-    <Version>0.4.0</Version>
-    <FileVersion>0.4.0.0</FileVersion>
-    <AssemblyVersion>0.4.0.0</AssemblyVersion>
+    <Version>0.4.1</Version>
+    <FileVersion>0.4.1.0</FileVersion>
+    <AssemblyVersion>0.4.1.0</AssemblyVersion>
     <Company>Error SMP</Company>
     <Product>Error SMP Screenshare</Product>
     <Authors>Error SMP</Authors>
@@ -36,6 +36,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Using Include="System.IO" />
+    <Using Include="System.Net.Http" />
     <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
@@ -43,6 +45,8 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\..\signatures\errorsmp-signatures.json" LogicalName="errorsmp-signatures.json" />
+    <EmbeddedResource Include="Assets\error-mark.png" LogicalName="errorsmp-mark.png" />
+    <EmbeddedResource Include="Assets\Fonts\Minecraft.ttf" LogicalName="errorsmp-minecraft.ttf" />
   </ItemGroup>
 
 </Project>

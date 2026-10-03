@@ -1,6 +1,6 @@
 # Error SMP Screenshare client agent (Phase 2)
 
-Windows, C# / .NET 8, WinForms. Small single-file `.exe`; requires the .NET 8 Desktop Runtime.
+Windows, C# / .NET 8, WPF. Small single-file `.exe`; requires the .NET 8 Desktop Runtime.
 
 The suspect runs this once. It: reads the key → `describe` (shows the real server
 name on the consent screen without consuming the key) → consent screen
